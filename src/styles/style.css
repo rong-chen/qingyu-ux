@@ -1,0 +1,42 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+.infinite-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    width: 3px;
+}
+
+.infinite-list .infinite-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+    background: var(--el-color-primary-light-9);
+    margin: 10px;
+    color: var(--el-color-primary);
+}
+
+.infinite-list .infinite-list-item + .list-item {
+    margin-top: 10px;
+}
+
+/* 自定义滚动条宽度 */
+::-webkit-scrollbar {
+    width: 8px; /* 这里设置滚动条的宽度 */
+}
+
+
+/* 自定义滚动条的滑块 */
+::-webkit-scrollbar-thumb {
+    background: rgba(184, 184, 184, 0.84); /* 滑块颜色 */
+    border-radius: 6px; /* 滑块圆角 */
+}
+
+/* 滑块悬停时的样式 */
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(184, 184, 184, 1); /* 滑块悬停颜色 */
+}
