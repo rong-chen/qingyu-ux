@@ -20,9 +20,9 @@
               <el-input v-model="form.password" placeholder="密码"/>
             </el-form-item>
             <el-form-item>
-              <el-button style="width: 100%" @click="dbSaveClick" type="primary">登录</el-button>
+              <el-button style="width: 100%;margin-top: 30px" @click="dbSaveClick" type="primary">登录</el-button>
               <div style="width: 100%">
-                <el-button style="width: 100%">注册</el-button>
+                <el-button style="width: 100%;margin-top: 10px">注册</el-button>
               </div>
             </el-form-item>
           </el-form>
@@ -35,16 +35,15 @@
 <script setup>
 import {ref} from "vue"
 import {useRouter} from "vue-router";
-
+import {userStore} from "@/store/user.js";
+const userEvent=userStore()
 let form = ref({
   username: '',
   password: '',
 })
 const router = useRouter()
 const dbSaveClick = () => {
-  router.push({
-    name:'layout'
-  })
+  userEvent.Login()
 }
 </script>
 
@@ -61,7 +60,7 @@ const dbSaveClick = () => {
 
 .login-form {
   width: 750px;
-  height: 40%;
+  height: 400px;
   position: absolute;
   top: 50%;
   left: 50%;

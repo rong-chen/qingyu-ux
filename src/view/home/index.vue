@@ -60,7 +60,7 @@ const searchHandler = () => {
   width: 80%;
   margin: auto;
   box-sizing: border-box;
-  max-height: 500px;
+  max-height: 400px;
   overflow: auto;
   box-shadow: 0 2px 4px #e4e4e4;
   background: #fff;
