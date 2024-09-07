@@ -96,5 +96,6 @@ const searchHandler = () => {
 
 .home-container .el-input__wrapper {
   height: 60px;
+  box-sizing: border-box;
 }
 </style>

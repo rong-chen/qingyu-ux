@@ -1,4 +1,5 @@
 import axios from 'axios'
+import {ElMessage} from "element-plus";
 
 const api = axios.create({
     baseURL: '/api',
@@ -16,20 +17,13 @@ api.interceptors.request.use(config => {
     Promise.reject(err)
 })
 api.interceptors.response.use(res => {
-    return res.data
+    if (res['data']['code'] === 0) {
+        return res.data
+    }
+    ElMessage.error(res['data']['msg'])
 }, err => {
     let {res} = err
     if (res) {
-        switch (res.status) {
-            case 401:
-                break
-            case 403:
-                break
-            case 404:
-                break
-            case 500:
-                break
-        }
     } else {
         if (!window.navigator.onLine) {
             return

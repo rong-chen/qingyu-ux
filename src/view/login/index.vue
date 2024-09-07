@@ -2,10 +2,10 @@
   <div class="login-container">
     <div class="login-form">
       <div class="login-card">
-       <div>
-         <h1>清</h1>
-         <h1 style="margin-top: 20px">语</h1>
-       </div>
+        <div>
+          <h1>清</h1>
+          <h1 style="margin-top: 20px">语</h1>
+        </div>
       </div>
       <div class="form-card">
         <div class="formTitle">
@@ -36,14 +36,21 @@
 import {ref} from "vue"
 import {useRouter} from "vue-router";
 import {userStore} from "@/store/user.js";
-const userEvent=userStore()
+import {ElMessage} from "element-plus";
+
+const userEvent = userStore()
 let form = ref({
   username: '',
   password: '',
 })
 const router = useRouter()
 const dbSaveClick = () => {
-  userEvent.Login()
+  if (form.value.password && form.value.username) {
+
+    userEvent.LoginEvent(form.value)
+    return
+  }
+  ElMessage.error("请输入用户名密码")
 }
 </script>
 

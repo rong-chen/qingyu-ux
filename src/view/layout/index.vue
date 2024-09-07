@@ -11,7 +11,16 @@
       <el-container>
         <el-header>
           <div class="header">
-            头部
+            <div>
+              头部
+            </div>
+            <div style="display: flex;align-items: center">
+              <el-button link @click="openDrawer">
+                <el-icon size="20" color="white">
+                  <DArrowLeft/>
+                </el-icon>
+              </el-button>
+            </div>
           </div>
         </el-header>
         <el-main>
@@ -21,29 +30,41 @@
         </el-main>
       </el-container>
     </el-container>
+    <user-drawer ref='userDrawerRef'></user-drawer>
   </div>
 </template>
 <script setup>
 import {useRoute, useRouter} from "vue-router";
-import {onMounted} from "vue";
-const router =useRouter()
+import {onMounted, ref} from "vue";
+import UserDrawer from "@/components/userDrawer.vue";
+import {GetUserInfo} from "@/api/user.js";
+import {userStore} from "@/store/user.js";
+
+const router = useRouter()
 const route = useRoute();
+const userDrawerRef = ref(null)
 let routes = route.matched[0].children
 const goPage = (item) => {
-  console.log(item)
   router.push({
     name: item.name
   })
 }
-onMounted(() => {
-  console.log()
+const openDrawer = () => {
+  console.log(userDrawerRef.value?.show())
+}
+onMounted(async () => {
+  const res = await GetUserInfo()
+  const user = userStore()
+  if (res['code'] === 0) {
+    user.userInfo = res.data
+  }
 })
 </script>
 <style scoped>
 .layout-layout {
   height: 100%;
   width: 100%;
-  background: #578dfd;
+  background: #17181a;
 }
 
 
@@ -55,9 +76,18 @@ onMounted(() => {
 }
 
 .content {
-  background: #84adff;
+  background: #25272a;
   height: 100%;
   border-radius: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  align-items: center;
+  height: 100%;
+  padding: 0 20px 0 0;
 }
 </style>
 <style>

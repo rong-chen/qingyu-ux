@@ -40,3 +40,15 @@
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(184, 184, 184, 1); /* 滑块悬停颜色 */
 }
+
+.multi-line-ellipsis {
+    word-wrap: break-word; /* 在长单词或 URL 上换行 */
+    white-space: normal;
+    overflow: visible;
+    word-break: break-word;
+}
+.ellipsis {
+    white-space: nowrap;         /* 防止文本换行 */
+    overflow: hidden;            /* 隐藏超出容器的文本 */
+    text-overflow: ellipsis;     /* 使用省略号表示超出的文本 */
+}
