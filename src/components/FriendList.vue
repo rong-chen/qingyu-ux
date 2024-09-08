@@ -12,7 +12,7 @@
         </template>
         <template #default>
           <div v-for="item2 in item.children">
-            <div class="item">
+            <div class="item" @click.stop.prevent="$emit('select', item2)">
               {{
                 item2.friendInfo.nickname ? item2.friendInfo.nickname.slice(0, 16) : ''
               }}

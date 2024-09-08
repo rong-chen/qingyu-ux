@@ -39,10 +39,12 @@ import {onMounted, ref} from "vue";
 import UserDrawer from "@/components/userDrawer.vue";
 import {GetUserInfo} from "@/api/user.js";
 import {userStore} from "@/store/user.js";
+import {useSocketStore} from "@/store/websocket.js";
 
 const router = useRouter()
 const route = useRoute();
 const userDrawerRef = ref(null)
+const socketStore = useSocketStore()
 let routes = route.matched[0].children
 const goPage = (item) => {
   router.push({
@@ -55,9 +57,11 @@ const openDrawer = () => {
 onMounted(async () => {
   const res = await GetUserInfo()
   const user = userStore()
-  if (res['code'] === 0) {
+  console.log(res)
+  if (res && res['code'] === 0) {
     user.userInfo = res.data
   }
+  socketStore.openSocket()
 })
 </script>
 <style scoped>

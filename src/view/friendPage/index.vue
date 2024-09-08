@@ -10,12 +10,12 @@
            </el-button>
         </span></div>
         <div class="classify infinite-list" style="overflow: auto;">
-          <FriendList :data="classifyList"></FriendList>
+          <FriendList :data="classifyList" @select="clickItem"></FriendList>
         </div>
       </div>
     </div>
     <div style="width: calc(100% - 200px);">
-      <chatPage></chatPage>
+      <chatPage :info = "currentFriendChat"></chatPage>
     </div>
   </div>
 </template>
@@ -28,6 +28,10 @@ import {ElMessage} from "element-plus";
 import {getClassifyList, SearchAllFriends} from "@/api/friends.js";
 import FriendList from "@/components/FriendList.vue";
 
+let currentFriendChat = ref("")
+const clickItem =(item)=>{
+  currentFriendChat.value = item.friendInfo
+}
 const userEvent = userStore()
 const defaultProps = {
   children: 'children',
@@ -60,9 +64,7 @@ onMounted(async () => {
         })
       })
     }
-    console.log(classifyList.value)
   }
-
 })
 
 

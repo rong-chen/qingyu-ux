@@ -1,38 +1,89 @@
 <template>
   <div class="chat-page-container">
     <div class="title">
-      用户张三
+      {{ info.nickname }}
     </div>
-    <div class="content">
-      <div class="left-message">
-        <el-avatar shape="square" :src="friendInfo.avatar"/>
-        <div class="message-content multi-line-ellipsis">
-          123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123123
+    <div class="message-container" ref="messageRef" style="overflow: auto;height: calc(100% - 155px)">
+      <div class="content" v-for="item in chatList" :key="item.id">
+        <div class="left-message" v-show="item.sender === user.userInfo.ID">
+          <el-avatar style="min-width: 40px;min-height: 40px" shape="square" :src="friendInfo.avatar"/>
+          <div class="message-content multi-line-ellipsis">
+            {{ item.message }}
+          </div>
+        </div>
+        <div class="right-message" v-show="item.receiver === user.userInfo.ID">
+          <div class="message-content">
+            {{ item.message }}
+          </div>
+          <el-avatar shape="square" :src="friendInfo.avatar"/>
         </div>
       </div>
-      <div class="right-message">
-        <div class="message-content">
-          123123
-        </div>
-        <el-avatar shape="square" :src="friendInfo.avatar"/>
-      </div>
     </div>
-    <div class="chat-input">
-      <el-input class="sendInput" placeholder="原神启动" v-model="sendParams.text"/>
+    <div class="chat-input"  v-show="info.ID">
+      <el-input @keyup.enter="handleEnter" class="sendInput" placeholder="原神启动"
+                v-model="sendParams"/>
+      <el-button style="height: 55px;margin-left: 10px;width: 55px" @click="audioHandler">
+        <template #default>
+          <el-icon size="20"><Microphone /></el-icon>
+        </template>
+      </el-button>
     </div>
   </div>
 </template>
 <script setup>
-import {ref} from "vue";
-import qinyulogo from "@/assets/img/qinyulogo.png"
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch, watchEffect} from "vue";
+import qingyulogo from "@/assets/img/qinyulogo.png"
+import {useSocketStore} from "@/store/websocket.js";
+import {userStore} from "@/store/user.js";
 
+const messageRef = ref(null)
+const socketStore = useSocketStore();
+const user = userStore()
 let friendInfo = ref({
-  avatar: qinyulogo,
+  avatar: qingyulogo,
+})
+onMounted(() => {
+})
+const scrollToBottom = () => {
+  nextTick(() => {
+    messageRef.value.scrollTop = messageRef.value.scrollHeight;
+  })
+}
+const prop = defineProps({
+  info: {
+    type: String,
+    required: true
+  }
+})
+const audioHandler =()=>{
+  console.log("audioHandler")
+}
+const handleEnter = () => {
+  if (sendParams.value) {
+    let params = {
+      "type": "text",
+      "message": sendParams.value,
+      "description": "",
+      "sender": user.userInfo.ID,
+      "receiver": info.value.ID
+    }
+    socketStore.send(params)
+    sendParams.value = ""
+  }
+}
+const {info} = toRefs(prop)
+const chatList = computed(() => socketStore.chatList.filter(item => item.sender === info.value.ID || item.receiver === info.value.ID));
+watchEffect(() => {
+  scrollToBottom()
+  friendInfo.value = {...friendInfo.value, ...info.value};
+})
+watch(() => chatList, (newValue) => {
+  scrollToBottom()
+}, {
+  deep: true
 })
 
-let sendParams = ref({
-  text: ''
-})
+let sendParams = ref("")
 </script>
 <style scoped lang="scss">
 .chat-page-container {
@@ -54,15 +105,11 @@ let sendParams = ref({
   }
 
   .chat-input {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    height: 130px;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 100px;
 
     .sendInput {
       height: 55px;
@@ -76,6 +123,7 @@ let sendParams = ref({
     position: relative;
     box-sizing: border-box;
     padding: 10px;
+    min-height: 60px;
 
     .left-message {
       position: absolute;
@@ -99,6 +147,8 @@ let sendParams = ref({
       position: absolute;
       right: 10px;
       display: flex;
+      justify-content: right;
+
       .message-content {
         margin-right: 10px;
         border: 1px solid #4f6f9f;
