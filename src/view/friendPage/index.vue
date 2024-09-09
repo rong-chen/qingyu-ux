@@ -23,7 +23,7 @@
 <script setup>
 import {ref, onMounted} from "vue";
 import {userStore} from "@/store/user.js";
-import chatPage from "@/view/components/chatPage/index.vue";
+import chatPage from "@/components/chatPage/index.vue";
 import {ElMessage} from "element-plus";
 import {getClassifyList, SearchAllFriends} from "@/api/friends.js";
 import FriendList from "@/components/FriendList.vue";

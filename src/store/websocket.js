@@ -3,10 +3,12 @@ import {userStore} from "@/store/user.js";
 import {ref} from "vue";
 import {Notify} from "@/common/notification.js";
 import {getChatList} from "@/api/chat.js";
+import {useWebRTCStore} from "@/store/webrtc.js";
 
 export const useSocketStore = defineStore("SocketStore", () => {
     let socket = ref(null)
     let user = userStore()
+    let webrtcStore = useWebRTCStore()
     let chatList = ref([])
     const openSocket = () => {
         if (socket.value) {
@@ -24,11 +26,14 @@ export const useSocketStore = defineStore("SocketStore", () => {
             }
         }
         socket.value.onmessage = (event) => {
-            let data = event.data
-            if (data) {
-                chatList.value.push(JSON.parse(data))
+            let data = JSON.parse(event.data)
+            if (data.type === 'video') {
+                webrtcStore.onMessageFromServer(data)
             }
-            Notify()
+            if (data.type === 'text') {
+                chatList.value.push(data)
+                Notify()
+            }
         }
         socket.value.onerror = (event) => {
             // alert("连接断开")

@@ -24,7 +24,7 @@
                 v-model="sendParams"/>
       <el-button style="height: 55px;margin-left: 10px;width: 55px" @click="audioHandler">
         <template #default>
-          <el-icon size="20"><Microphone /></el-icon>
+          <el-icon size="20" ><Microphone /></el-icon>
         </template>
       </el-button>
     </div>
@@ -34,6 +34,7 @@
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch, watchEffect} from "vue";
 import qingyulogo from "@/assets/img/qinyulogo.png"
 import {useSocketStore} from "@/store/websocket.js";
+import {useAudioStore} from "@/store/audio.js";
 import {userStore} from "@/store/user.js";
 
 const messageRef = ref(null)
@@ -56,7 +57,7 @@ const prop = defineProps({
   }
 })
 const audioHandler =()=>{
-  console.log("audioHandler")
+  socketStore.startCall(info.value.ID)
 }
 const handleEnter = () => {
   if (sendParams.value) {
