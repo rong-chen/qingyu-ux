@@ -15,7 +15,8 @@
       </div>
     </div>
     <div style="width: calc(100% - 200px);">
-      <chatPage :info = "currentFriendChat"></chatPage>
+      <!--      <chatPage :info = "currentFriendChat"></chatPage>-->
+      <video-media v-if="currentFriendChat.ID" :friendId="currentFriendChat.ID"></video-media>
     </div>
   </div>
 </template>
@@ -27,9 +28,10 @@ import chatPage from "@/components/chatPage/index.vue";
 import {ElMessage} from "element-plus";
 import {getClassifyList, SearchAllFriends} from "@/api/friends.js";
 import FriendList from "@/components/FriendList.vue";
+import VideoMedia from "@/components/MediaDevices/videoMedia.vue";
 
 let currentFriendChat = ref("")
-const clickItem =(item)=>{
+const clickItem = (item) => {
   currentFriendChat.value = item.friendInfo
 }
 const userEvent = userStore()

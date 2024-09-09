@@ -1,37 +1,36 @@
 <template>
   <div class="layout-layout">
-<!--    <el-container style="width: 100%;height: 100%">-->
-<!--      <el-aside class="menu" width="80px" height="100%" style="padding:20px 0">-->
-<!--        <el-menu class="menu">-->
-<!--          <el-menu-item class="elMenuItem" v-for="item in routes" @click="goPage(item)">-->
-<!--            <img :src="item.icon" :alt="item.name"/>-->
-<!--          </el-menu-item>-->
-<!--        </el-menu>-->
-<!--      </el-aside>-->
-<!--      <el-container>-->
-<!--        <el-header>-->
-<!--          <div class="header">-->
-<!--            <div>-->
-<!--              头部-->
-<!--            </div>-->
-<!--            <div style="display: flex;align-items: center">-->
-<!--              <el-button link @click="openDrawer">-->
-<!--                <el-icon size="20" color="white">-->
-<!--                  <DArrowLeft/>-->
-<!--                </el-icon>-->
-<!--              </el-button>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </el-header>-->
-<!--        <el-main>-->
-<!--          <div class="content">-->
-<!--            <router-view></router-view>-->
-<!--          </div>-->
-<!--        </el-main>-->
-<!--      </el-container>-->
-<!--    </el-container>-->
-<!--    <user-drawer ref='userDrawerRef'></user-drawer>-->
-    <video-media ></video-media>
+    <el-container style="width: 100%;height: 100%">
+      <el-aside class="menu" width="80px" height="100%" style="padding:20px 0">
+        <el-menu class="menu">
+          <el-menu-item class="elMenuItem" v-for="item in routes" @click="goPage(item)">
+            <img :src="item.icon" :alt="item.name"/>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+      <el-container>
+        <el-header>
+          <div class="header">
+            <div>
+              头部
+            </div>
+            <div style="display: flex;align-items: center">
+              <el-button link @click="openDrawer">
+                <el-icon size="20" color="white">
+                  <DArrowLeft/>
+                </el-icon>
+              </el-button>
+            </div>
+          </div>
+        </el-header>
+        <el-main>
+          <div class="content">
+            <router-view></router-view>
+          </div>
+        </el-main>
+      </el-container>
+    </el-container>
+    <user-drawer ref='userDrawerRef'></user-drawer>
   </div>
 </template>
 <script setup>
