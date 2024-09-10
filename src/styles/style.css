@@ -52,3 +52,24 @@
     overflow: hidden;            /* 隐藏超出容器的文本 */
     text-overflow: ellipsis;     /* 使用省略号表示超出的文本 */
 }
+
+
+.receive {
+    color: #ffffff;
+    cursor: pointer;
+    height: 30px;
+    width: 60px;
+    border: 1px solid #90b2fa;
+    border-radius: 6px;
+    background-color: #8cadfb;
+    box-shadow: 1px 1px 1px #d6e1f4;
+}
+.refuse {
+    cursor: pointer;
+    height: 30px;
+    width: 60px;
+    border: 1px solid #c5c5c5;
+    border-radius: 6px;
+    background-color: #fdfdfd;
+    box-shadow: 1px 1px 1px #d6e1f4;
+}

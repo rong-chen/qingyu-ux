@@ -15,8 +15,7 @@
       </div>
     </div>
     <div style="width: calc(100% - 200px);">
-      <!--      <chatPage :info = "currentFriendChat"></chatPage>-->
-      <video-media v-if="currentFriendChat.ID" :friendId="currentFriendChat.ID"></video-media>
+       <chatPage :info = "currentFriendChat"></chatPage>
     </div>
   </div>
 </template>

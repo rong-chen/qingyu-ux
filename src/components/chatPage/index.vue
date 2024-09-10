@@ -19,30 +19,35 @@
         </div>
       </div>
     </div>
-    <div class="chat-input"  v-show="info.ID">
+    <div class="chat-input" v-show="info.ID">
       <el-input @keyup.enter="handleEnter" class="sendInput" placeholder="原神启动"
                 v-model="sendParams"/>
       <el-button style="height: 55px;margin-left: 10px;width: 55px" @click="audioHandler">
         <template #default>
-          <el-icon size="20" ><Microphone /></el-icon>
+          <el-icon size="20">
+            <Microphone/>
+          </el-icon>
         </template>
       </el-button>
     </div>
   </div>
 </template>
 <script setup>
-import {computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch, watchEffect} from "vue";
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch, watchEffect, getCurrentInstance} from "vue";
 import qingyulogo from "@/assets/img/qinyulogo.png"
 import {useSocketStore} from "@/store/websocket.js";
 import {useAudioStore} from "@/store/audio.js";
 import {userStore} from "@/store/user.js";
+import {useWebRTCStore} from "@/store/webrtc.js";
 
+const proxy = getCurrentInstance()
 const messageRef = ref(null)
 const socketStore = useSocketStore();
 const user = userStore()
 let friendInfo = ref({
   avatar: qingyulogo,
 })
+const audioStore = useAudioStore()
 onMounted(() => {
 })
 const scrollToBottom = () => {
@@ -56,8 +61,14 @@ const prop = defineProps({
     required: true
   }
 })
-const audioHandler =()=>{
-  socketStore.startCall(info.value.ID)
+const webRtc = useWebRTCStore()
+const audioHandler = async () => {
+  audioStore.isShowEle = true
+  audioStore.isSender = true
+  await webRtc.CreatePeerConnection(info.value.ID)
+  await webRtc.Call()
+  audioStore.startCall(user.userInfo.ID, info.value.ID)
+
 }
 const handleEnter = () => {
   if (sendParams.value) {

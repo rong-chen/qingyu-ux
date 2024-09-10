@@ -1,5 +1,6 @@
 import {createRouter, createWebHistory} from "vue-router";
 import homeIcon from "@/assets/img/menu-icon/home.png"
+import friends from "@/assets/img/menu-icon/friends.png"
 import {GetUserInfo} from "@/api/user.js";
 import {userStore} from "@/store/user.js";
 
@@ -14,13 +15,13 @@ const routes = [
             {
                 path: 'friendPage',
                 name: 'friendPage',
-                icon: homeIcon,
+                icon: friends,
                 component: () => import('@/view/friendPage/index.vue')
             },
             {
                 path: 'voiceClass',
                 name: 'voiceClass',
-                icon: homeIcon,
+                icon: friends,
                 component: () => import('@/view/voiceClass/index.vue')
             },
         ]

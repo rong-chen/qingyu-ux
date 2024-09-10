@@ -31,6 +31,7 @@
       </el-container>
     </el-container>
     <user-drawer ref='userDrawerRef'></user-drawer>
+    <audio-media ></audio-media>
   </div>
 </template>
 <script setup>
@@ -40,7 +41,7 @@ import UserDrawer from "@/components/userDrawer.vue";
 import {GetUserInfo} from "@/api/user.js";
 import {userStore} from "@/store/user.js";
 import {useSocketStore} from "@/store/websocket.js";
-import VideoMedia from "@/components/MediaDevices/videoMedia.vue";
+import AudioMedia from "@/components/MediaDevices/audioMedia.vue";
 
 const router = useRouter()
 const route = useRoute();
@@ -58,7 +59,6 @@ const openDrawer = () => {
 onMounted(async () => {
   const res = await GetUserInfo()
   const user = userStore()
-  console.log(res)
   if (res && res['code'] === 0) {
     user.userInfo = res.data
   }

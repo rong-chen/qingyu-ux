@@ -9,6 +9,7 @@
         <el-button>添加房间</el-button>
         <el-button @click="addFriend">添加好友</el-button>
         <el-button @click="addClassify">添加好友目录</el-button>
+        <el-button @click="exit">退出系统</el-button>
       </span>
     </el-drawer>
   </div>
@@ -18,11 +19,19 @@ import {ref, watch} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {AddApplyFriend, CreateFriendClass} from "@/api/friends.js";
 import {userStore} from "@/store/user.js";
+import {useRouter} from "vue-router";
 
 const user = userStore()
 let visible = ref(false)
 const show = () => {
   visible.value = true;
+}
+const router = useRouter()
+const exit = () => {
+  router.push({
+    name: "login"
+  })
+  localStorage.removeItem("token")
 }
 const addFriend = () => {
   ElMessageBox.prompt('请输入用户ID', '提示', {
@@ -71,7 +80,8 @@ defineExpose({
 .userDrawer-container {
   .el-drawer {
     background: #25272a;
-    .el-drawer__header{
+
+    .el-drawer__header {
       color: white;
     }
   }
