@@ -1,7 +1,7 @@
 <template>
   <div class="video-media-container" v-if="prop.friendId">
     <div>
-      <video style="width: 300px;height: 300px" controls class="videoMedia"></video>
+      <audio style="width: 300px;height: 300px" controls class="audioMedia"></audio>
       <br>
       <video style="width: 300px;height: 300px" controls class="videoMedia2"></video>
       <el-button @click="">发送</el-button>

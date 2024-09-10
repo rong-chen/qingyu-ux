@@ -40,13 +40,15 @@ export const useWebRTCStore = defineStore("useWebRTCStore", () => {
     // 发送请求
     const Call = async () => {
         return new Promise(async (resolve, reject) => {
-            let localStream = await navigator.mediaDevices.getUserMedia({audio: true})
-            let ele = document.querySelector(".videoMedia")
-            ele.srcObject = localStream
-            ele.play()
-            localStream.getTracks().forEach(track => {
-                peerConnection.value.addTrack(track, localStream);
-            });
+            try {
+                let localStream = await navigator.mediaDevices.getUserMedia({audio: true})
+                localStream.getTracks().forEach(track => {
+                    peerConnection.value.addTrack(track, localStream);
+                });
+            } catch (e) {
+
+            }
+
             resolve()
         })
     }
@@ -73,16 +75,15 @@ export const useWebRTCStore = defineStore("useWebRTCStore", () => {
             case 'offer':
                 peerConnection.value.setRemoteDescription(new RTCSessionDescription(message))
                     .then(() => peerConnection.value.createAnswer().then(async answer => {
-                            await peerConnection.value.setLocalDescription(answer)
-                            socketStore.send({
-                                type: "video",
-                                message: JSON.stringify(answer),
-                                description: "answer",
-                                sender: user.userInfo.ID,
-                                receiver: fId.value
-                            })
-                        }
-                    ))
+                        await peerConnection.value.setLocalDescription(answer)
+                        socketStore.send({
+                            type: "video",
+                            message: JSON.stringify(answer),
+                            description: "answer",
+                            sender: user.userInfo.ID,
+                            receiver: fId.value
+                        })
+                    }))
                 break;
             case 'answer':
                 await peerConnection.value.setRemoteDescription(new RTCSessionDescription(message));

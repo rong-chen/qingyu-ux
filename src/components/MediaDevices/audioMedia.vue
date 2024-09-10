@@ -1,7 +1,7 @@
 <template>
   <div v-show="show" class="audioMediaContainer">
     <div style="width: 400px">
-      <video class="videoMedia" style="width: 100%;height: 100%"></video>
+      <audio class="audioMedia" style="width: 100%;height: 100%"></audio>
     </div>
     <div  style="width: 400px">
       <video class="videoMedia2" style="width: 100%;height: 100%"></video>
