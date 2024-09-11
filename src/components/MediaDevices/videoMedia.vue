@@ -12,7 +12,7 @@
 
 <script setup>
 import {useAudioStore} from "@/store/audio.js";
-import {useSocketStore} from "@/store/websocket.js";
+import {useSocketStore} from "@/store/websocketHandler/websocket.js";
 import {useWebRTCStore} from "@/store/webrtc.js";
 import {onMounted} from "vue";
 

@@ -32,25 +32,34 @@ export const useSocketStore = defineStore("SocketStore", () => {
         // websocket 接收消息
         socket.value.onmessage = async (event) => {
             let data = JSON.parse(event.data)
-            if (data.type === 'video') {
+            if (data.type === 'audio') {
                 await webrtcStore.onMessageFromServer(data)
             }
             if (data.type === 'text') {
                 chatList.value.push(data)
                 Notify()
             }
+
             if (data.type === 'audio_conn') {
                 audioStore.currentFriendId = data.sender
-                audioStore.isSender = false
-                audioStore.isShowEle = true
+
+                if (data.description === 'apply') {
+                    audioStore.notify()
+                    return
+                }
                 // 如果用户点击拒绝
                 if (data.description === "拒绝" && audioStore.isShowEle) {
+                    return
+                }
+                // 如果用户点击拒绝
+                if (data.description === "占线" && audioStore.isShowEle) {
                     audioStore.isShowEle = false
                     return
                 }
                 // 如果用户点击同意
                 if (data.description === "同意" && audioStore.isShowEle) {
                     // 交换发送offer
+
                     await webrtcStore.onMessageFromServer(data)
                 }
             }

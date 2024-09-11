@@ -35,7 +35,7 @@
 <script setup>
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, toRefs, watch, watchEffect, getCurrentInstance} from "vue";
 import qingyulogo from "@/assets/img/qinyulogo.png"
-import {useSocketStore} from "@/store/websocket.js";
+import {useSocketStore} from "@/store/websocketHandler/websocket.js";
 import {useAudioStore} from "@/store/audio.js";
 import {userStore} from "@/store/user.js";
 import {useWebRTCStore} from "@/store/webrtc.js";

@@ -40,13 +40,12 @@ import {onMounted, ref} from "vue";
 import UserDrawer from "@/components/userDrawer.vue";
 import {GetUserInfo} from "@/api/user.js";
 import {userStore} from "@/store/user.js";
-import {useSocketStore} from "@/store/websocket.js";
+import {useSocketStore} from "@/store/websocketHandler/websocket.js";
 import AudioMedia from "@/components/MediaDevices/audioMedia.vue";
-
+const socketStore = useSocketStore()
 const router = useRouter()
 const route = useRoute();
 const userDrawerRef = ref(null)
-const socketStore = useSocketStore()
 let routes = route.matched[0].children
 const goPage = (item) => {
   router.push({
