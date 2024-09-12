@@ -3,25 +3,9 @@
     <div>
       <audio class="audioMedia"></audio>
     </div>
-    <div> 麦克风：
-      <el-select
-          v-model="value"
-          placeholder="Select"
-          size="large"
-          style="width: 240px"
-      >
-        <el-option
-            v-for="item in microphoneList"
-            :key="item"
-            :label="item"
-            :value="item"
-        />
-      </el-select>
-    </div>
-    <el-button v-if="audioStore.isSender">取消</el-button>
+    <el-button>挂断</el-button>
   </div>
 </template>
-
 
 <script setup>
 import {useAudioStore} from "@/store/audio.js";
@@ -58,10 +42,6 @@ onMounted(() => {
   background-color: #ffffff;
   width: 400px;
   height: 100px;
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translate(-50%, -50%);
   border-radius: 10px;
 }
 

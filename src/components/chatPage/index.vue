@@ -65,6 +65,7 @@ const webRtc = useWebRTCStore()
 const audioHandler = async () => {
   audioStore.isShowEle = true
   audioStore.isSender = true
+
   await webRtc.CreatePeerConnection(info.value.ID)
   await webRtc.Call()
   audioStore.startCall(user.userInfo.ID, info.value.ID)

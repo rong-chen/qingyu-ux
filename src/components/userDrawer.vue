@@ -11,6 +11,9 @@
         <el-button @click="addClassify">添加好友目录</el-button>
         <el-button @click="exit">退出系统</el-button>
       </span>
+      <div>
+        <audio-media></audio-media>
+      </div>
     </el-drawer>
   </div>
 </template>
@@ -20,6 +23,7 @@ import {ElMessage, ElMessageBox} from "element-plus";
 import {AddApplyFriend, CreateFriendClass} from "@/api/friends.js";
 import {userStore} from "@/store/user.js";
 import {useRouter} from "vue-router";
+import AudioMedia from "@/components/MediaDevices/audioMedia.vue";
 
 const user = userStore()
 let visible = ref(false)
@@ -80,7 +84,6 @@ defineExpose({
 .userDrawer-container {
   .el-drawer {
     background: #25272a;
-
     .el-drawer__header {
       color: white;
     }

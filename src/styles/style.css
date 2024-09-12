@@ -47,10 +47,11 @@
     overflow: visible;
     word-break: break-word;
 }
+
 .ellipsis {
-    white-space: nowrap;         /* 防止文本换行 */
-    overflow: hidden;            /* 隐藏超出容器的文本 */
-    text-overflow: ellipsis;     /* 使用省略号表示超出的文本 */
+    white-space: nowrap; /* 防止文本换行 */
+    overflow: hidden; /* 隐藏超出容器的文本 */
+    text-overflow: ellipsis; /* 使用省略号表示超出的文本 */
 }
 
 
@@ -58,17 +59,20 @@
     color: #ffffff;
     cursor: pointer;
     height: 30px;
-    width: 60px;
+    width: 80px;
     border: 1px solid #90b2fa;
     border-radius: 6px;
+    font-size: 12px;
     background-color: #8cadfb;
     box-shadow: 1px 1px 1px #d6e1f4;
 }
+
 .refuse {
     cursor: pointer;
     height: 30px;
-    width: 60px;
+    width: 80px;
     border: 1px solid #c5c5c5;
+    font-size: 12px;
     border-radius: 6px;
     background-color: #fdfdfd;
     box-shadow: 1px 1px 1px #d6e1f4;

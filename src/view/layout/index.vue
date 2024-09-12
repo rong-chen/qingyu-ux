@@ -31,7 +31,6 @@
       </el-container>
     </el-container>
     <user-drawer ref='userDrawerRef'></user-drawer>
-    <audio-media ></audio-media>
   </div>
 </template>
 <script setup>

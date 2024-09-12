@@ -6,6 +6,7 @@ import {getChatList} from "@/api/chat.js";
 import {useWebRTCStore} from "@/store/webrtc.js";
 import {ElNotification} from "element-plus";
 import {useAudioStore} from "@/store/audio.js";
+import {audioSocketEvent} from "@/store/websocketHandler/audio_handler.js";
 
 export const useSocketStore = defineStore("SocketStore", () => {
     let socket = ref(null)
@@ -32,45 +33,45 @@ export const useSocketStore = defineStore("SocketStore", () => {
         // websocket 接收消息
         socket.value.onmessage = async (event) => {
             let data = JSON.parse(event.data)
+            // 交换audio通信凭证
             if (data.type === 'audio') {
                 await webrtcStore.onMessageFromServer(data)
+                return
             }
             if (data.type === 'text') {
                 chatList.value.push(data)
                 Notify()
+                return
             }
-
+            // 系统通知
+            if (data.type === "broadcast") {
+                ElNotificationEvent(data.message)
+                return
+            }
+            // audio申请请求
             if (data.type === 'audio_conn') {
                 audioStore.currentFriendId = data.sender
-
-                if (data.description === 'apply') {
-                    audioStore.notify()
-                    return
-                }
-                // 如果用户点击拒绝
-                if (data.description === "拒绝" && audioStore.isShowEle) {
-                    return
-                }
-                // 如果用户点击拒绝
-                if (data.description === "占线" && audioStore.isShowEle) {
-                    audioStore.isShowEle = false
-                    return
-                }
-                // 如果用户点击同意
-                if (data.description === "同意" && audioStore.isShowEle) {
-                    // 交换发送offer
-
-                    await webrtcStore.onMessageFromServer(data)
-                }
+                await audioSocketEvent(data)
             }
         }
-        socket.value.onerror = (event) => {
-            // alert("连接断开")
-        }
+        socket.value.onerror = (event) => {}
     }
     const send = (val) => {
-        chatList.value.push(val)
+        if (val.type === 'text') {
+            chatList.value.push(val)
+        }
         socket.value.send(JSON.stringify(val))
+    }
+    let elNotification = ref(null)
+    const ElNotificationEvent = (msg) => {
+        if (!elNotification.value) {
+            elNotification.value = ElNotification({
+                title: msg, dangerouslyUseHTMLString: true, duration: 5000,
+            })
+            setTimeout(() => {
+                elNotification.value = null
+            }, 5000)
+        }
     }
 
     return {

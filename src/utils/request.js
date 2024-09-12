@@ -2,14 +2,17 @@ import axios from 'axios'
 import {ElMessage} from "element-plus";
 import {router} from "@/router/index.js";
 
+
+console.log(import.meta.env.VITE_APP_API)
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: import.meta.env.VITE_APP_API,
     timeout: 3000,
     headers: {
         "Content-Type": "application/json"
     }
 })
 
+console.log(import.meta)
 api.interceptors.request.use(config => {
     if (config.url !== '/user/login') {
         config.headers.Authorization = localStorage.getItem('token')
@@ -18,6 +21,8 @@ api.interceptors.request.use(config => {
 }, err => {
     Promise.reject(err)
 })
+console.log(import.meta);
+
 api.interceptors.response.use(res => {
     if (res['data']['code'] === 0) {
         return res.data
@@ -25,7 +30,7 @@ api.interceptors.response.use(res => {
     //  已在别处登录
     if (res['data']['code'] === 1) {
         localStorage.removeItem('token')
-        router.push({ name: 'login' })
+        router.push({name: 'login'})
     }
     ElMessage.error(res['data']['msg'])
 }, err => {

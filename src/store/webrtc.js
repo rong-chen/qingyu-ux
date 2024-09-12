@@ -12,13 +12,11 @@ export const useWebRTCStore = defineStore("useWebRTCStore", () => {
 
     let fId = ref("")
     const configuration = {
-        iceServers: [
-            {urls: 'stun:stun.l.google.com:19302'},
-            {
-                urls: 'turn:chenrong.vip:3478', // TURN 服务器地址
-                username: 'chenrong', // TURN 用户名
-                credential: '130561' // TURN 密码
-            }]
+        iceServers: [{urls: 'stun:stun.l.google.com:19302'}, {
+            urls: 'turn:chenrong.vip:3478', // TURN 服务器地址
+            username: 'chenrong', // TURN 用户名
+            credential: '130561' // TURN 密码
+        }]
     };
     // 创建peerConnection
     const CreatePeerConnection = (fid) => {
@@ -54,8 +52,8 @@ export const useWebRTCStore = defineStore("useWebRTCStore", () => {
                 localStream.getTracks().forEach(track => {
                     peerConnection.value.addTrack(track, localStream);
                 });
-            } catch (e) {}
-
+            } catch (e) {
+            }
             resolve()
         })
     }
@@ -102,7 +100,7 @@ export const useWebRTCStore = defineStore("useWebRTCStore", () => {
     }
 
     return {
-        CreatePeerConnection, onMessageFromServer, Call
+        CreatePeerConnection, onMessageFromServer, Call,peerConnection
     }
 
 })
