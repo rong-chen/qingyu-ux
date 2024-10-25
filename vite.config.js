@@ -1,16 +1,13 @@
 import {defineConfig, loadEnv} from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path';
-import UnoCSS from 'unocss/vite'
 // https://vitejs.dev/config/
 export default defineConfig(({command, mode}) => {
     const load = loadEnv(mode, process.cwd())
-    console.log(load)
     let env = {}
     for (let loadKey in load) {
         env[loadKey] = load[loadKey]
     }
-    console.log('https://' + load.VITE_APP_URL + ":" + load.VITE_APP_PORT)
     return {
         plugins: [vue()],
         resolve: {

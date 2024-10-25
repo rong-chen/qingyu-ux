@@ -3,7 +3,6 @@ import {ElMessage} from "element-plus";
 import {router} from "@/router/index.js";
 
 
-console.log(import.meta.env.VITE_APP_API)
 const api = axios.create({
     baseURL: import.meta.env.VITE_APP_API,
     timeout: 3000,
@@ -12,7 +11,6 @@ const api = axios.create({
     }
 })
 
-console.log(import.meta)
 api.interceptors.request.use(config => {
     if (config.url !== '/user/login') {
         config.headers.Authorization = localStorage.getItem('token')
@@ -21,7 +19,6 @@ api.interceptors.request.use(config => {
 }, err => {
     Promise.reject(err)
 })
-console.log(import.meta);
 
 api.interceptors.response.use(res => {
     if (res['data']['code'] === 0) {

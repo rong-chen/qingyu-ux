@@ -82,6 +82,5 @@ const props = defineProps({
       }
     }
   }
-
 }
 </style>

@@ -14,6 +14,8 @@ export const useSocketStore = defineStore("SocketStore", () => {
     let webrtcStore = useWebRTCStore()
     let chatList = ref([])
     let audioStore = useAudioStore()
+    let callBackList = ref([])
+
     const openSocket = () => {
         if (socket.value) {
             socket.value.close()
@@ -33,28 +35,17 @@ export const useSocketStore = defineStore("SocketStore", () => {
         // websocket 接收消息
         socket.value.onmessage = async (event) => {
             let data = JSON.parse(event.data)
-            // 交换audio通信凭证
-            if (data.type === 'audio') {
-                await webrtcStore.onMessageFromServer(data)
-                return
-            }
+            callBackList.value.forEach(callBack => {
+                callBack(data)
+            })
             if (data.type === 'text') {
                 chatList.value.push(data)
                 Notify()
-                return
-            }
-            // 系统通知
-            if (data.type === "broadcast") {
-                ElNotificationEvent(data.message)
-                return
-            }
-            // audio申请请求
-            if (data.type === 'audio_conn') {
-                audioStore.currentFriendId = data.sender
-                await audioSocketEvent(data)
             }
         }
-        socket.value.onerror = (event) => {}
+        socket.value.onerror = (event) => {
+
+        }
     }
     const send = (val) => {
         if (val.type === 'text') {
@@ -62,6 +53,10 @@ export const useSocketStore = defineStore("SocketStore", () => {
         }
         socket.value.send(JSON.stringify(val))
     }
+    const sendAny = (val) => {
+        socket.value.send(JSON.stringify(val))
+    }
+
     let elNotification = ref(null)
     const ElNotificationEvent = (msg) => {
         if (!elNotification.value) {
@@ -73,8 +68,11 @@ export const useSocketStore = defineStore("SocketStore", () => {
             }, 5000)
         }
     }
+    const addWebSocketCallBack = (func) => {
+        callBackList.value.push(func)
+    }
 
     return {
-        socket, openSocket, chatList, send
+        socket, openSocket, chatList, send, addWebSocketCallBack, sendAny
     }
 })

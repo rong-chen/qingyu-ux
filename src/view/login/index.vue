@@ -46,7 +46,6 @@ let form = ref({
 const router = useRouter()
 const dbSaveClick = () => {
   if (form.value.password && form.value.username) {
-
     userEvent.LoginEvent(form.value)
     return
   }

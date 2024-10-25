@@ -86,7 +86,6 @@ export const useAudioStore = defineStore('useAudioStore', () => {
             if (time.value <= 0) {
                 clearInterval(interval)
                 if (audioNotifyEle.value) {
-                    console.log(123)
                     audioNotifyEle.value.close()
                     audioNotifyEle.value = null
                 }

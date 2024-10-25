@@ -11,8 +11,9 @@ export const userStore = defineStore('userStore', () => {
     })
     let token = ref("")
     const LoginEvent = async (form) => {
-        const {code, data} = await Login(form)
-        if (code === 0) {
+        const res = await Login(form)
+        if (res.code === 0) {
+            let data = res.token
             localStorage.setItem('token', data)
             ElMessage.success("登录成功")
             token.value = data
