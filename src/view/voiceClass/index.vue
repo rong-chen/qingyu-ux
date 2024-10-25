@@ -119,30 +119,35 @@ onMounted(async () => {
   }
   ListenSocketMessage()
 
+  const exitRoomFunc = () => {
+    let paramsMap = {
+      type: "room_notify_exit",
+      message: "",
+      description: "用户退出",
+      sender: userEvent.userInfo.ID,
+      roomId: lastRoomId.value,
+    }
+    socketStore.sendAny(paramsMap);
+  }
 
   window.addEventListener('beforeunload', () => {
     if (lastRoomId.value) {
-      exitRoom(
-          {
-            "id": userEvent.userInfo.ID,
-            "roomId": lastRoomId.value
-          }
-      )
+      exitRoomFunc()
     }
   });
 })
 
-
-onBeforeUnmount(() => {
-  if (lastRoomId.value) {
-    exitRoom(
-        {
-          "id": userEvent.userInfo.ID,
-          "roomId": lastRoomId.value
-        }
-    )
-  }
-})
+//
+// onBeforeUnmount(() => {
+//   if (lastRoomId.value) {
+//     exitRoom(
+//         {
+//           "id": userEvent.userInfo.ID,
+//           "roomId": lastRoomId.value
+//         }
+//     )
+//   }
+// })
 
 const socketStore = useSocketStore()
 const ListenSocketMessage = () => {
@@ -166,7 +171,6 @@ const socketMessage = async (data) => {
             screenStream.value.getTracks().forEach((track) => {
               peerConnectionList.value[item['userId']]['peer'].addTrack(track, screenStream.value)
             })
-
             if (userEvent.userInfo.ID === item['userId']) {
               peerConnectionList.value[item['userId']]['stream'] = screenStream.value
             }
@@ -256,7 +260,10 @@ const socketMessage = async (data) => {
   if (['offer', 'answer', 'candidate'].includes(data['type'])) {
     switch (data['type']) {
       case 'offer':
-        await peerConnectionList.value[data['sender']]['peer']?.setRemoteDescription({type: "offer", sdp: data['message']})
+        await peerConnectionList.value[data['sender']]['peer']?.setRemoteDescription({
+          type: "offer",
+          sdp: data['message']
+        })
         let answer = await peerConnectionList.value[data['sender']]['peer']?.createAnswer()
         await peerConnectionList.value[data['sender']]['peer']?.setLocalDescription(answer)
         let params = {
