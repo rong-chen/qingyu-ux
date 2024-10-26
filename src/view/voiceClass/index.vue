@@ -48,7 +48,7 @@
 import {nextTick, onBeforeUnmount, onMounted, reactive, ref} from "vue";
 import {userStore} from "@/store/user.js";
 import {ElMessage} from "element-plus";
-import {exitRoom, getCollectRoomList, getCreateRoomList, joinRoom} from "@/api/room.js";
+import {getCollectRoomList, getCreateRoomList, joinRoom} from "@/api/room.js";
 import {useSocketStore} from "@/store/websocketHandler/websocket.js";
 
 let currentRoomId = ref("");
@@ -57,7 +57,7 @@ let peerConnectionList = ref({});
 let collectList = ref([])
 const configuration = {
   iceServers: [
-    {urls: 'stun:stun.l.google.com:19302'},
+    // {urls: 'stun:stun.l.google.com:19302'},
     {
       urls: 'turn:47.120.34.163:3478', // TURN 服务器地址
       username: 'chenrong', // TURN 用户名
@@ -66,7 +66,6 @@ const configuration = {
   ]
 };
 let screenStream = ref(null)
-
 const resetEle = async () => {
   await nextTick(() => {
     Object.keys(peerConnectionList.value).forEach((item) => {
@@ -84,26 +83,32 @@ const resetEle = async () => {
 }
 
 const handleRoomCollapseChange = async ({ID}) => {
-  if (lastRoomId.value) {
-    await exitRoom(
-        {
-          "id": userEvent.userInfo.ID,
-          "roomId": lastRoomId.value
-        }
-    )
-  }
-  await initMediaSource();
+  exitRoomFunc()
+  let id = await initMediaSource();
   const res = await joinRoom({
     "id": userEvent.userInfo.ID,
     "roomId": ID,
-    "mediaStreamId": screenStream.value.id
+    "mediaStreamId": id
   })
   if (res['code'] === 0) {
     ElMessage.success("加入房间成功")
     lastRoomId.value = ID
   }
 }
-
+const exitRoomFunc = () => {
+  if (!lastRoomId.value) {
+    return
+  }
+  screenStream.value = null
+  let paramsMap = {
+    type: "room_notify_exit",
+    message: "",
+    description: "用户退出",
+    sender: userEvent.userInfo.ID,
+    roomId: lastRoomId.value,
+  }
+  socketStore.sendAny(paramsMap);
+}
 const userEvent = userStore()
 const classifyList = ref([])
 onMounted(async () => {
@@ -119,40 +124,31 @@ onMounted(async () => {
   }
   ListenSocketMessage()
 
-  const exitRoomFunc = () => {
-    let paramsMap = {
-      type: "room_notify_exit",
-      message: "",
-      description: "用户退出",
-      sender: userEvent.userInfo.ID,
-      roomId: lastRoomId.value,
-    }
-    socketStore.sendAny(paramsMap);
-  }
-
-  window.addEventListener('beforeunload', () => {
-    if (lastRoomId.value) {
-      exitRoomFunc()
-    }
-  });
+  window.addEventListener('beforeunload', exitRoomFunc);
 })
 
-//
-// onBeforeUnmount(() => {
-//   if (lastRoomId.value) {
-//     exitRoom(
-//         {
-//           "id": userEvent.userInfo.ID,
-//           "roomId": lastRoomId.value
-//         }
-//     )
-//   }
-// })
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', exitRoomFunc);
+})
 
 const socketStore = useSocketStore()
 const ListenSocketMessage = () => {
   socketStore.addWebSocketCallBack(socketMessage)
 }
+
+let pendingCandidates = ref([])
+
+const resetConnect = (userId) => {
+  let paramsMap = {
+    type: "resetConnect",
+    message: "重连",
+    description: "重连",
+    sender: userEvent.userInfo.ID,
+    receiver: userId,
+  }
+  socketStore.sendAny(paramsMap);
+}
+
 
 let isInit = ref(false)
 const socketMessage = async (data) => {
@@ -161,16 +157,21 @@ const socketMessage = async (data) => {
       let userIdList = data['roomInfo']['onlineUser']
       if (userIdList && userIdList.length > 0) {
         for (const item of userIdList) {
-          if (!peerConnectionList.value[item['userId']]) {
-            let peer = new RTCPeerConnection(configuration)
-            peerConnectionList.value[item['userId']] = {
+          if (!getPeer(item['userId'])) {
+            let peer = createPeer()
+            setPeer(item['userId'], {
               peer: peer,
               stream: null,
               streamId: item['streamId']
-            }
-            screenStream.value.getTracks().forEach((track) => {
-              peerConnectionList.value[item['userId']]['peer'].addTrack(track, screenStream.value)
             })
+            if (!screenStream.value) {
+              await initMediaSource()
+            }
+
+            screenStream.value.getTracks().forEach((track) => {
+              getPeer(item['userId']).addTrack(track, screenStream.value)
+            })
+
             if (userEvent.userInfo.ID === item['userId']) {
               peerConnectionList.value[item['userId']]['stream'] = screenStream.value
             }
@@ -182,7 +183,6 @@ const socketMessage = async (data) => {
                   sdpMid: event.candidate.sdpMid,
                   sdpMLineIndex: event.candidate.sdpMLineIndex,
                 }
-
                 let paramsMap = {
                   type: "candidate",
                   message: JSON.stringify(params),
@@ -195,26 +195,30 @@ const socketMessage = async (data) => {
             }
 
             peer.oniceconnectionstatechange = () => {
-              console.log('ICE 状态:', peer.iceConnectionState);
+              if (peer.iceConnectionState === 'disconnected') {
+                // resetConnect(item['userId'])
+              }
             };
-            peer.ontrack = (event) => {
-              // 接收到流之后处理
 
-              Object.keys(peerConnectionList.value).forEach((el) => {
-                if (peerConnectionList.value[el]['streamId'] === event.streams[0].id) {
-                  console.log('流id' + event.streams[0].id)
-                  console.log('用户id' + el)
-                  peerConnectionList.value[el]['stream'] = event.streams[0]
-                  const videoElement = document.querySelector(`.video-container-player-${el}`);
-                  if (videoElement) {
-                    videoElement.srcObject = peerConnectionList.value[el]["stream"];
-                    videoElement.onloadedmetadata = () => {
-                      videoElement.play();
-                    };
-                  } else {
-                    console.error('未找到对应的 <video> 元素');
+            peer.ontrack = async (event) => {
+              // 接收到流之后处理
+              console.log('ontrack')
+              console.log(event.streams[0].id)
+              await nextTick(() => {
+                Object.keys(peerConnectionList.value).forEach((el) => {
+                  if (peerConnectionList.value[el]['streamId'] === event.streams[0].id) {
+                    peerConnectionList.value[el]['stream'] = event.streams[0]
+                    const videoElement = document.querySelector(`.video-container-player-${el}`);
+                    if (videoElement) {
+                      videoElement.srcObject = peerConnectionList.value[el]["stream"];
+                      videoElement.onloadedmetadata = () => {
+                        videoElement.play();
+                      };
+                    } else {
+                      console.error('未找到对应的 <video> 元素');
+                    }
                   }
-                }
+                })
               })
             }
           }
@@ -222,21 +226,9 @@ const socketMessage = async (data) => {
 
         if (!isInit.value) {
           for (const item of Object.keys(peerConnectionList.value)) {
+            console.log(item)
             if (userEvent.userInfo.ID !== item) {
-              let peer = peerConnectionList.value[userEvent.userInfo.ID]['peer'];
-              let offer = await peer.createOffer()
-              await peer.setLocalDescription({
-                type: 'offer',
-                sdp: offer.sdp
-              })
-              let paramsMap = {
-                type: "offer",
-                message: offer.sdp,
-                description: "offer",
-                sender: userEvent.userInfo.ID,
-                receiver: item,
-              }
-              socketStore.sendAny(paramsMap);
+              await createOfferToSend(userEvent.userInfo.ID, item)
             }
           }
         }
@@ -246,58 +238,169 @@ const socketMessage = async (data) => {
       let userIdList = data['roomInfo']['onlineUser']
       if (userIdList && userIdList.length) {
         let maps = {}
-        userIdList.forEach(item => {
-          maps[item['userId']] = peerConnectionList.value[item['userId']]
+        // 还剩下的好友列表
+        let idList = userIdList.map((item) => item['userId'])
+        Object.keys(peerConnectionList.value).forEach((el) => {
+          if (idList.includes(el)) {
+            maps[el] = peerConnectionList.value[el]
+          } else {
+            getPeer(el).close();
+          }
         })
         peerConnectionList.value = maps;
-        console.log(peerConnectionList.value)
       } else {
         peerConnectionList.value = {};
       }
       await resetEle()
+    } else if (data.description === '重连') {
+      let peer = getPeer(data['sender'])
+      let offer = await peer.createOffer({iceRestart: true})
+      await peer.setLocalDescription({
+        type: 'offer',
+        sdp: offer.sdp
+      })
+
+      let paramsMap = {
+        type: "offer",
+        message: offer.sdp,
+        description: "offer",
+        sender: userEvent.userInfo.ID,
+        receiver: data['sender'],
+      }
+      socketStore.sendAny(paramsMap);
+
     }
+  } else if (data['type'] === 'resetConnect') {
+    let peer = getPeer(data['sender'])
+    let offer = await peer.createOffer({iceRestart: true})
+    await peer.setLocalDescription({
+      type: 'offer',
+      sdp: offer.sdp
+    })
+
+    let paramsMap = {
+      type: "offer",
+      message: offer.sdp,
+      description: "offer",
+      sender: userEvent.userInfo.ID,
+      receiver: data['sender'],
+    }
+    socketStore.sendAny(paramsMap);
+
   }
   if (['offer', 'answer', 'candidate'].includes(data['type'])) {
+    let peer;
     switch (data['type']) {
       case 'offer':
-        await peerConnectionList.value[data['sender']]['peer']?.setRemoteDescription({
+        await setRemoteOfferAndSendAnswer(data['sender'], {
           type: "offer",
           sdp: data['message']
+        }).then(() => {
+          pendingCandidates.value = pendingCandidates.value.filter((item) => {
+            if (item['id'] === data['sender']) {
+              peer.addIceCandidate(item['candidate'])
+                  .catch(error => console.error("添加 ICE 候选者时出错:", error));
+              return false
+            }
+            return true
+          })
         })
-        let answer = await peerConnectionList.value[data['sender']]['peer']?.createAnswer()
-        await peerConnectionList.value[data['sender']]['peer']?.setLocalDescription(answer)
-        let params = {
-          type: "answer",
-          message: answer.sdp,
-          description: "answer",
-          sender: data['receiver'],
-          receiver: data['sender']
-        }
-        socketStore.sendAny(params)
         break
       case 'answer':
-        await peerConnectionList.value[data['receiver']]['peer']?.setRemoteDescription(new RTCSessionDescription({
-          type: 'answer',
-          sdp: data['message']
-        }));
+        peer = getPeer(data['receiver'])
+        if (peer.signalingState === "have-local-offer") {
+          await peer.setRemoteDescription(new RTCSessionDescription({
+            type: 'answer',
+            sdp: data['message']
+          })).then(() => {
+            pendingCandidates.value = pendingCandidates.value.filter(async (item) => {
+              if (item['id'] === data['receiver']) {
+                await peer.addIceCandidate(item['candidate'])
+                    .catch(error => console.error("添加 ICE 候选者时出错:", error));
+                return false
+              }
+              return true
+            })
+          })
+        }
         break
       case "candidate":
         // 对方发送的 ICE 候选者
         if (data['message']) {
-          let peerConnection = peerConnectionList.value[data['sender']]['peer']
+          let peerConnection = getPeer(data['sender'])
+          const jsonObject = JSON.parse(data['message']);
           if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
-            const jsonObject = JSON.parse(data['message']);
             // 添加 ICE 候选者
-            peerConnection.addIceCandidate(new RTCIceCandidate(jsonObject))
+            await peerConnection.addIceCandidate(new RTCIceCandidate(jsonObject))
                 .catch(error => console.error("添加 ICE 候选者时出错:", error));
           } else {
-            console.warn("还没有设置远端描述，无法添加候选者");
+            pendingCandidates.value.push({id: data['sender'], candidateId: new RTCIceCandidate(jsonObject)});
           }
         }
         break
     }
   }
   await resetEle()
+}
+
+// 创建peer
+const createPeer = () => {
+  return new RTCPeerConnection(configuration)
+}
+
+// 获取peer
+const getPeer = (userId) => {
+  try {
+    return peerConnectionList.value[userId]['peer']
+  } catch (error) {
+    return null
+  }
+}
+
+// 添加peer
+const setPeer = (userId, data) => {
+  peerConnectionList.value[userId] = data
+  console.log(peerConnectionList.value)
+}
+
+// 添加远端offer
+const setRemoteOfferAndSendAnswer = async (userId, offer) => {
+  return new Promise(async (resolve) => {
+    let peer = getPeer(userId)
+    await peer.setRemoteDescription(offer)
+    let answer = await peer.createAnswer()
+    await peer.setLocalDescription(answer)
+    let params = {
+      type: "answer",
+      message: answer.sdp,
+      description: "answer",
+      sender: userEvent.userInfo.ID,
+      receiver: userId
+    }
+    socketStore.sendAny(params)
+  })
+}
+
+// 生成offer 发送远端
+const createOfferToSend = async (userId, toId) => {
+  let peer = getPeer(userId)
+  let offer = await peer.createOffer()
+  await peer.setLocalDescription({
+    type: 'offer',
+    sdp: offer.sdp
+  })
+
+  let params = {
+    type: "offer",
+    message: offer.sdp,
+    description: "offer",
+    sender: userId,
+    receiver: toId,
+  }
+
+  socketStore.sendAny(params);
+
+
 }
 
 
@@ -310,6 +413,7 @@ const initMediaSource = async () => {
         video: true, // 获取视频流，如果只需要音频可以设置为 false
         audio: false  // 获取音频流，如果不需要可以设置为 false
       });
+      return screenStream.value.id
     } catch (error) {
       console.error('Error accessing display media:', error);
     }
