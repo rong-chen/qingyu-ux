@@ -180,6 +180,7 @@ const socketMessage = async (data) => {
               onicecandidate(e, item['userId'])
             }
             peer.oniceconnectionstatechange = oniceconnectionstatechange(peer, item['userId'])
+            peer.onsignalingstatechange = onsignalingstatechange(peer)
             peer.ontrack = ontrack
           }
         }
@@ -336,7 +337,12 @@ const oniceconnectionstatechange = (peer, userId) => {
     console.warn("ICE 连接失败，可能需要重新尝试连接");
     resetConnect(userId)
   }
-  resetEle()
+}
+const onsignalingstatechange = (peerConnection) => {
+  console.log('onsignalingstatechange')
+  if (peerConnection.signalingState === "stable") {
+    resetEle()
+  }
 }
 
 const onicecandidate = (event, userId) => {
@@ -384,6 +390,7 @@ const initializePeer = async (userId, receiverId, currentUserId) => {
 
   peer.ontrack = ontrack
   peer.oniceconnectionstatechange = oniceconnectionstatechange(peer, userId)
+  peer.onsignalingstatechange = onsignalingstatechange(peer)
   let paramsMap = {
     type: "offer",
     message: offer.sdp,
