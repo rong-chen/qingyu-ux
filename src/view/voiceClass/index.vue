@@ -57,7 +57,7 @@ let peerConnectionList = ref({});
 let collectList = ref([])
 const configuration = {
   iceServers: [
-    // {urls: 'stun:stun.l.google.com:19302'},
+    {urls: 'stun:stun.l.google.com:19302'},
     {
       urls: 'turn:47.120.34.163:3478', // TURN 服务器地址
       username: 'chenrong', // TURN 用户名
@@ -157,6 +157,9 @@ const socketMessage = async (data) => {
       let userIdList = data['roomInfo']['onlineUser']
       if (userIdList && userIdList.length > 0) {
         for (const item of userIdList) {
+          if (getPeer(item['userId'])) {
+            updatePeer(item['userId'], item['streamId'])
+          }
           if (!getPeer(item['userId'])) {
             let peer = createPeer()
             setPeer(item['userId'], {
@@ -167,70 +170,21 @@ const socketMessage = async (data) => {
             if (!screenStream.value) {
               await initMediaSource()
             }
-
             screenStream.value.getTracks().forEach((track) => {
               getPeer(item['userId']).addTrack(track, screenStream.value)
             })
-
             if (userEvent.userInfo.ID === item['userId']) {
-              peerConnectionList.value[item['userId']]['stream'] = screenStream.value
+              updatePeer(item['userId'], '', '', screenStream.value)
             }
-
-            peer.onicecandidate = (event) => {
-              if (event.candidate) {
-                let params = {
-                  candidate: event.candidate.candidate,
-                  sdpMid: event.candidate.sdpMid,
-                  sdpMLineIndex: event.candidate.sdpMLineIndex,
-                }
-                let paramsMap = {
-                  type: "candidate",
-                  message: JSON.stringify(params),
-                  description: "candidate",
-                  sender: userEvent.userInfo.ID,
-                  roomId: data['roomId'],
-                }
-                socketStore.sendAny(paramsMap);
-              }
+            peer.onicecandidate = (e) => {
+              onicecandidate(e, item['userId'])
             }
-
-            peer.oniceconnectionstatechange = () => {
-              if (peer.iceConnectionState === 'disconnected') {
-                // resetConnect(item['userId'])
-              }
-            };
-
-            peer.ontrack = async (event) => {
-              // 接收到流之后处理
-              console.log('ontrack')
-              console.log(event.streams[0].id)
-              await nextTick(() => {
-                Object.keys(peerConnectionList.value).forEach((el) => {
-                  if (peerConnectionList.value[el]['streamId'] === event.streams[0].id) {
-                    peerConnectionList.value[el]['stream'] = event.streams[0]
-                    const videoElement = document.querySelector(`.video-container-player-${el}`);
-                    if (videoElement) {
-                      videoElement.srcObject = peerConnectionList.value[el]["stream"];
-                      videoElement.onloadedmetadata = () => {
-                        videoElement.play();
-                      };
-                    } else {
-                      console.error('未找到对应的 <video> 元素');
-                    }
-                  }
-                })
-              })
-            }
+            peer.oniceconnectionstatechange = oniceconnectionstatechange(peer, item['userId'])
+            peer.ontrack = ontrack
           }
         }
-
         if (!isInit.value) {
-          for (const item of Object.keys(peerConnectionList.value)) {
-            console.log(item)
-            if (userEvent.userInfo.ID !== item) {
-              await createOfferToSend(userEvent.userInfo.ID, item)
-            }
-          }
+          await firstJoinSendOffer()
         }
         isInit.value = true
       }
@@ -251,9 +205,8 @@ const socketMessage = async (data) => {
       } else {
         peerConnectionList.value = {};
       }
-      await resetEle()
     } else if (data.description === '重连') {
-      let peer = getPeer(data['sender'])
+      let peer = getPeer(data['receiver'])
       let offer = await peer.createOffer({iceRestart: true})
       await peer.setLocalDescription({
         type: 'offer',
@@ -268,53 +221,47 @@ const socketMessage = async (data) => {
         receiver: data['sender'],
       }
       socketStore.sendAny(paramsMap);
-
     }
   } else if (data['type'] === 'resetConnect') {
-    let peer = getPeer(data['sender'])
-    let offer = await peer.createOffer({iceRestart: true})
-    await peer.setLocalDescription({
-      type: 'offer',
-      sdp: offer.sdp
-    })
-
-    let paramsMap = {
-      type: "offer",
-      message: offer.sdp,
-      description: "offer",
-      sender: userEvent.userInfo.ID,
-      receiver: data['sender'],
-    }
-    socketStore.sendAny(paramsMap);
-
+    await initializePeer(data['receiver'], data['sender'], userEvent.userInfo.ID)
   }
   if (['offer', 'answer', 'candidate'].includes(data['type'])) {
     let peer;
     switch (data['type']) {
       case 'offer':
-        await setRemoteOfferAndSendAnswer(data['sender'], {
-          type: "offer",
-          sdp: data['message']
-        }).then(() => {
-          pendingCandidates.value = pendingCandidates.value.filter((item) => {
-            if (item['id'] === data['sender']) {
-              peer.addIceCandidate(item['candidate'])
-                  .catch(error => console.error("添加 ICE 候选者时出错:", error));
-              return false
-            }
-            return true
+        if (data['description'] === 'reconnect') {
+          await receiverOfferHandler(data['sender'], {
+            type: "offer",
+            sdp: data['message']
           })
-        })
+          return
+        } else {
+          console.log('setOffer')
+          peer = getPeer(data['sender'])
+          await setRemoteOfferAndSendAnswer(data['sender'], {
+            type: "offer",
+            sdp: data['message']
+          }).then(() => {
+            pendingCandidates.value = pendingCandidates.value.filter((item) => {
+              if (item['id'] === data['sender']) {
+                peer.addIceCandidate(item['candidate'])
+                    .catch(error => console.error("添加 ICE 候选者时出错:", error));
+                return false
+              }
+              return true
+            })
+          })
+        }
         break
       case 'answer':
-        peer = getPeer(data['receiver'])
+        peer = getPeer(data['sender'])
         if (peer.signalingState === "have-local-offer") {
           await peer.setRemoteDescription(new RTCSessionDescription({
             type: 'answer',
             sdp: data['message']
           })).then(() => {
             pendingCandidates.value = pendingCandidates.value.filter(async (item) => {
-              if (item['id'] === data['receiver']) {
+              if (item['id'] === data['sender']) {
                 await peer.addIceCandidate(item['candidate'])
                     .catch(error => console.error("添加 ICE 候选者时出错:", error));
                 return false
@@ -327,11 +274,11 @@ const socketMessage = async (data) => {
       case "candidate":
         // 对方发送的 ICE 候选者
         if (data['message']) {
-          let peerConnection = getPeer(data['sender'])
+          peer = getPeer(data['sender'])
           const jsonObject = JSON.parse(data['message']);
-          if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+          if (peer.remoteDescription && peer.remoteDescription.type) {
             // 添加 ICE 候选者
-            await peerConnection.addIceCandidate(new RTCIceCandidate(jsonObject))
+            await peer.addIceCandidate(new RTCIceCandidate(jsonObject))
                 .catch(error => console.error("添加 ICE 候选者时出错:", error));
           } else {
             pendingCandidates.value.push({id: data['sender'], candidateId: new RTCIceCandidate(jsonObject)});
@@ -340,7 +287,14 @@ const socketMessage = async (data) => {
         break
     }
   }
-  await resetEle()
+}
+
+const firstJoinSendOffer = async () => {
+  for (const item of Object.keys(peerConnectionList.value)) {
+    if (userEvent.userInfo.ID !== item) {
+      await createOfferToSend(userEvent.userInfo.ID, item)
+    }
+  }
 }
 
 // 创建peer
@@ -357,10 +311,129 @@ const getPeer = (userId) => {
   }
 }
 
+const ontrack = async (event) => {
+  await nextTick(() => {
+    Object.keys(peerConnectionList.value).forEach((el) => {
+      if (peerConnectionList.value[el]['streamId'] === event.streams[0].id) {
+        peerConnectionList.value[el]['stream'] = event.streams[0]
+        const videoElement = document.querySelector(`.video-container-player-${el}`);
+        if (videoElement) {
+          videoElement.srcObject = peerConnectionList.value[el]["stream"];
+          videoElement.onloadedmetadata = () => {
+            videoElement.play();
+          };
+        } else {
+          console.error('未找到对应的 <video> 元素');
+        }
+      }
+    })
+  })
+}
+
+const oniceconnectionstatechange = (peer, userId) => {
+  console.log("ICE 状态:", peer.iceConnectionState);
+  if (peer.iceConnectionState === "failed" || peer.iceConnectionState === 'disconnected') {
+    console.warn("ICE 连接失败，可能需要重新尝试连接");
+    resetConnect(userId)
+  }
+  resetEle()
+}
+
+const onicecandidate = (event, userId) => {
+  if (event.candidate) {
+    let params = {
+      candidate: event.candidate.candidate,
+      sdpMid: event.candidate.sdpMid,
+      sdpMLineIndex: event.candidate.sdpMLineIndex,
+    }
+    let paramsMap = {
+      type: "candidate",
+      message: JSON.stringify(params),
+      description: "candidate",
+      sender: userEvent.userInfo.ID,
+      receiver: userId
+    }
+    socketStore.sendAny(paramsMap);
+  }
+}
+
+// 重连发起之后，初始化peer（销毁重建）
+const initializePeer = async (userId, receiverId, currentUserId) => {
+  //重建sender 的peer
+  let peer = createPeer()
+  // 赋值给sender 的map中
+  getPeer(userId).close()
+  updatePeer(userId, "", peer, '')
+  let offer = await peer.createOffer()
+  await peer.setLocalDescription({
+    type: 'offer',
+    sdp: offer.sdp
+  })
+
+  screenStream.value.getTracks().forEach((track) => {
+    getPeer(userId).addTrack(track, screenStream.value)
+  })
+
+  if (userEvent.userInfo.ID === userId) {
+    updatePeer(userId, '', '', screenStream.value)
+  }
+
+  peer.onicecandidate = (e) => {
+    onicecandidate(e, userId)
+  }
+
+  peer.ontrack = ontrack
+  peer.oniceconnectionstatechange = oniceconnectionstatechange(peer, userId)
+  let paramsMap = {
+    type: "offer",
+    message: offer.sdp,
+    description: "reconnect",
+    sender: currentUserId,
+    receiver: receiverId,
+  }
+  socketStore.sendAny(paramsMap);
+}
+
+
+// 接收到description为reconnect的字段
+const receiverOfferHandler = async (userId, offer) => {
+  getPeer(userId).close()
+  //重建sender 的peer
+  let peer = createPeer()
+  updatePeer(userId, "", peer, '')
+  await setRemoteOfferAndSendAnswer(userId, offer).then(() => {
+    pendingCandidates.value = pendingCandidates.value.filter((item) => {
+      if (item['id'] === userId) {
+        peer.addIceCandidate(item['candidate'])
+            .catch(error => console.error("添加 ICE 候选者时出错:", error));
+        return false
+      }
+      return true
+    })
+  })
+}
+
+
 // 添加peer
 const setPeer = (userId, data) => {
   peerConnectionList.value[userId] = data
-  console.log(peerConnectionList.value)
+}
+// 更新peer
+const updatePeer = (userId, streamId, peer, stream) => {
+  let m = {}
+  if (streamId) {
+    m['streamId'] = streamId
+  }
+  if (peer) {
+    m['peer'] = peer
+  }
+  if (stream) {
+    m['stream'] = stream
+  }
+  peerConnectionList.value[userId] = {
+    ...peerConnectionList.value[userId],
+    ...m
+  }
 }
 
 // 添加远端offer
@@ -378,18 +451,19 @@ const setRemoteOfferAndSendAnswer = async (userId, offer) => {
       receiver: userId
     }
     socketStore.sendAny(params)
+    resolve()
   })
 }
 
 // 生成offer 发送远端
 const createOfferToSend = async (userId, toId) => {
-  let peer = getPeer(userId)
+  let peer = getPeer(toId)
   let offer = await peer.createOffer()
   await peer.setLocalDescription({
     type: 'offer',
     sdp: offer.sdp
   })
-
+  console.log("success setLocalDescription")
   let params = {
     type: "offer",
     message: offer.sdp,
@@ -399,8 +473,6 @@ const createOfferToSend = async (userId, toId) => {
   }
 
   socketStore.sendAny(params);
-
-
 }
 
 
@@ -413,6 +485,7 @@ const initMediaSource = async () => {
         video: true, // 获取视频流，如果只需要音频可以设置为 false
         audio: false  // 获取音频流，如果不需要可以设置为 false
       });
+      console.log("current mediaDevicesId:", screenStream.value.id)
       return screenStream.value.id
     } catch (error) {
       console.error('Error accessing display media:', error);

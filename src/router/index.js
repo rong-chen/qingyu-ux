@@ -1,6 +1,7 @@
 import {createRouter, createWebHistory} from "vue-router";
 import homeIcon from "@/assets/img/menu-icon/home.png"
 import friends from "@/assets/img/menu-icon/friends.png"
+import radio_room from "@/assets/img/menu-icon/radio_room.png"
 import {GetUserInfo} from "@/api/user.js";
 import {userStore} from "@/store/user.js";
 
@@ -21,7 +22,7 @@ const routes = [
             {
                 path: 'voiceClass',
                 name: 'voiceClass',
-                icon: friends,
+                icon: radio_room,
                 component: () => import('@/view/voiceClass/index.vue')
             },
         ]

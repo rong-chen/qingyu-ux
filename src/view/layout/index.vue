@@ -3,8 +3,10 @@
     <el-container style="width: 100%;height: 100%">
       <el-aside class="menu" width="80px" height="100%" style="padding:20px 0">
         <el-menu class="menu">
-          <el-menu-item class="elMenuItem" v-for="item in routes" @click="goPage(item)">
-            <img :src="item.icon" :alt="item.name"/>
+          <el-menu-item class="elMenuItem" :class="{
+            'active':currentPage === item.name
+          }" v-for="item in routes" @click="goPage(item)">
+            <img :src="item['icon']" style="width: 32px;height: 32px; object-fit: contain; " :alt="item.name"/>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -41,12 +43,15 @@ import {GetUserInfo} from "@/api/user.js";
 import {userStore} from "@/store/user.js";
 import {useSocketStore} from "@/store/websocketHandler/websocket.js";
 import AudioMedia from "@/components/MediaDevices/audioMedia.vue";
+
 const socketStore = useSocketStore()
 const router = useRouter()
 const route = useRoute();
 const userDrawerRef = ref(null)
 let routes = route.matched[0].children
+let currentPage = ref("home")
 const goPage = (item) => {
+  currentPage.value = item.name
   router.push({
     name: item.name
   })
@@ -99,11 +104,16 @@ onMounted(async () => {
 }
 
 .el-menu-item {
-  border-radius: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
 }
 
 .el-menu-item:hover {
-  background: #91b6ff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.el-menu-item.active {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .el-header {
