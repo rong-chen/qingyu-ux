@@ -49,7 +49,7 @@ const router = useRouter()
 const route = useRoute();
 const userDrawerRef = ref(null)
 let routes = route.matched[0].children
-let currentPage = ref("home")
+let currentPage = ref("")
 const goPage = (item) => {
   currentPage.value = item.name
   router.push({
@@ -62,6 +62,8 @@ const openDrawer = () => {
 onMounted(async () => {
   const res = await GetUserInfo()
   const user = userStore()
+  currentPage.value = route.name ?? ''
+
   if (res && res['code'] === 0) {
     user.userInfo = res.data
   }

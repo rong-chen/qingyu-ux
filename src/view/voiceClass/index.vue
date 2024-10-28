@@ -36,13 +36,36 @@
         </div>
       </div>
     </div>
-
     <div style="width: calc(100% - 200px);" class="video-container">
       <ul class="infinite-list video-container-ul" style="overflow: auto;width: 100%;height: 100%">
-        <li class="infinite-list-item" style="width: 48%;height: auto" v-for="item in Object.keys(peerConnectionList)"
+        <li
+            style="width: 48%;background: transparent;padding-top: 10px;"
+            v-for="item in Object.keys(peerConnectionList)"
             :key="item">
-          <el-card style="width: 100%;height: 100%;padding: 0">
-            <video :class="'video-container-player-'+item" style="width: 100%;height: 100%"></video>
+          <el-card style="padding: 0;position: relative">
+            <div style="color: white">用户：{{ item }}</div>
+            <div class="video-mod">
+              <audio :class="'audio-container-player-'+item" style="width: 100%;height: auto;"></audio>
+              <div class="item-menu-container">
+                <el-button link style="margin-left: 10px" :disabled="!peerConnectionList[item].stream">
+                  <template #icon>
+                    <!--  下面click的判断条件是，如果是用户本人（不是远端）则禁用track轨道，否则直接把audio标签的srcObj置为空-->
+                    <el-icon color="white" size="20"
+                             @click="userEvent.userInfo.ID === item ? settingAudioTrack(item,!peerConnectionList[item].disabled) : audioDisabledHandler(item)">
+                      <Microphone v-show="!peerConnectionList[item]['disabled']"/>
+                      <Mute v-show="peerConnectionList[item]['disabled']"/>
+                    </el-icon>
+                  </template>
+                </el-button>
+                <!--                <el-button link style="margin-left: 10px"-->
+                <!--                           v-if="userEvent.userInfo.ID !== item"-->
+                <!--                           @click="fullScreenVideoHandler('.audio-container-player-'+item)">-->
+                <!--                  <el-icon size="20" color="white">-->
+                <!--                    <FullScreen/>-->
+                <!--                  </el-icon>-->
+                <!--                </el-button>-->
+              </div>
+            </div>
           </el-card>
         </li>
       </ul>
@@ -76,22 +99,68 @@ let screenStream = ref(null)
 const resetEle = async () => {
   await nextTick(() => {
     Object.keys(peerConnectionList.value).forEach((item) => {
-      const videoElement = document.querySelector(`.video-container-player-${item}`);
-      if (videoElement) {
-        videoElement.srcObject = peerConnectionList.value[item]["stream"];
-        videoElement.onloadedmetadata = () => {
-          videoElement.play();
-        };
+      const audioElement = document.querySelector(`.audio-container-player-${item}`);
+      if (audioElement) {
+        if (!getMap(item).disabled) {
+          audioElement.srcObject = peerConnectionList.value[item]["stream"];
+          audioElement.onloadedmetadata = () => {
+            audioElement.play();
+          };
+        }
       } else {
         console.error('未找到对应的 <video> 元素');
       }
     })
   })
 }
+const audioDisabledHandler = (id) => {
+  if (!peerConnectionList.value[id].disabled) {
+    const videoElement = document.querySelector(`.audio-container-player-${id}`)
+    if (videoElement) {
+      const width = videoElement.clientWidth;
+      const height = videoElement.clientHeight;
+      videoElement.srcObject = null;
+      videoElement.style.width = `${width}px`;
+      videoElement.style.height = `${height}px`;
+    } else {
+      console.error('未找到对应的 <video> 元素');
+    }
+  } else {
+    const videoElement = document.querySelector(`.audio-container-player-${id}`)
+    if (videoElement) {
+      videoElement.srcObject = peerConnectionList.value[id].stream;
+    } else {
+      console.error('未找到对应的 <video> 元素');
+    }
+  }
+  peerConnectionList.value[id].disabled = !peerConnectionList.value[id].disabled
+}
+const fullScreenVideoHandler = (className) => {
+  const videoElement = document.querySelector(className)
+  console.log(className)
+  if (videoElement) {
+    videoElement.requestFullscreen()
+  }
+}
+
+const getMap = async (id) => {
+  return peerConnectionList[id]
+}
+
+const settingAudioTrack = (userId, b) => {
+  let mapItem = getMap(userId)
+  mapItem['stream']?.getTracks().forEach((track) => {
+    track.enabled = b;
+  })
+  peerConnectionList.value[userId].disabled = !peerConnectionList.value[userId].disabled
+}
 
 const handleRoomCollapseChange = async ({ID}) => {
   exitRoomFunc()
   let id = await initMediaSource();
+  if (!id) {
+    return
+  }
   const res = await joinRoom({
     "id": userEvent.userInfo.ID,
     "roomId": ID,
@@ -130,7 +199,6 @@ onMounted(async () => {
     collectList.value = res.data
   }
   ListenSocketMessage()
-
   window.addEventListener('beforeunload', exitRoomFunc);
 })
 
@@ -164,12 +232,15 @@ const socketMessage = async (data) => {
       if (userIdList && userIdList.length > 0) {
         for (const item of userIdList) {
           if (getPeer(item['userId'])) {
-            updatePeer(item['userId'], item['streamId'])
+            updatePeer(item['userId'], item['streamId'], false)
           }
 
-
           if (userEvent.userInfo.ID === item['userId']) {
-            updatePeer(item['userId'], '', '', screenStream.value)
+            screenStream.value?.getTracks().forEach(track => {
+              track.enabled = true
+            })
+            updatePeer(item['userId'], '', '', screenStream.value, true)
+            await resetEle()
           }
 
           if (!getPeer(item['userId']) && item['userId'] !== userEvent.userInfo.ID) {
@@ -177,7 +248,8 @@ const socketMessage = async (data) => {
             setPeer(item['userId'], {
               peer: peer,
               stream: null,
-              streamId: item['streamId']
+              streamId: item['streamId'],
+              disabled: false
             })
 
             screenStream.value?.getTracks().forEach((track) => {
@@ -260,6 +332,7 @@ const socketMessage = async (data) => {
             })
           })
         }
+        await resetEle()
         break
       case 'answer':
         peer = getPeer(data['sender'])
@@ -277,6 +350,7 @@ const socketMessage = async (data) => {
               return true
             })
           })
+          await resetEle()
         }
         break
       case "candidate":
@@ -292,6 +366,7 @@ const socketMessage = async (data) => {
             pendingCandidates.value.push({id: data['sender'], candidateId: new RTCIceCandidate(jsonObject)});
           }
         }
+        await resetEle()
         break
     }
   }
@@ -324,7 +399,7 @@ const ontrack = async (event) => {
     Object.keys(peerConnectionList.value).forEach((el) => {
       if (peerConnectionList.value[el]['streamId'] === event.streams[0].id) {
         peerConnectionList.value[el]['stream'] = event.streams[0]
-        const videoElement = document.querySelector(`.video-container-player-${el}`);
+        const videoElement = document.querySelector(`.audio-container-player-${el}`);
         if (videoElement) {
           videoElement.srcObject = peerConnectionList.value[el]["stream"];
           videoElement.onloadedmetadata = () => {
@@ -339,7 +414,7 @@ const ontrack = async (event) => {
 }
 
 const oniceconnectionstatechange = (peer, userId) => {
-  console.log("ICE 状态:", peer.iceConnectionState);
+  // console.log("ICE 状态:", peer.iceConnectionState);
   if (peer.iceConnectionState === "failed" || peer.iceConnectionState === 'disconnected') {
     console.warn("ICE 连接失败，可能需要重新尝试连接");
     resetConnect(userId)
@@ -347,7 +422,7 @@ const oniceconnectionstatechange = (peer, userId) => {
 }
 
 const onsignalingstatechange = (peerConnection) => {
-  console.log('onsignalingstatechange')
+  // console.log('onsignalingstatechange')
   if (peerConnection.signalingState === "stable") {
     resetEle()
   }
@@ -377,7 +452,7 @@ const initializePeer = async (userId, receiverId, currentUserId) => {
   let peer = createPeer()
   // 赋值给sender 的map中
   getPeer(receiverId).close()
-  updatePeer(receiverId, "", peer, '')
+  updatePeer(receiverId, "", peer, '', false)
   let offer = await peer.createOffer()
   await peer.setLocalDescription({
     type: 'offer',
@@ -389,11 +464,11 @@ const initializePeer = async (userId, receiverId, currentUserId) => {
   })
 
   if (userEvent.userInfo.ID === userId) {
-    updatePeer(userId, '', '', screenStream.value)
+    updatePeer(userId, '', '', screenStream.value, true)
   }
 
   peer.onicecandidate = (e) => {
-    onicecandidate(e, userId)
+    onicecandidate(e, receiverId)
   }
 
   peer.ontrack = ontrack
@@ -415,7 +490,7 @@ const receiverOfferHandler = async (userId, offer) => {
   getPeer(userId).close()
   //重建sender 的peer
   let peer = createPeer()
-  updatePeer(userId, "", peer, '')
+  updatePeer(userId, "", peer, '', false)
   await setRemoteOfferAndSendAnswer(userId, offer).then(() => {
     pendingCandidates.value = pendingCandidates.value.filter((item) => {
       if (item['id'] === userId) {
@@ -434,7 +509,7 @@ const setPeer = (userId, data) => {
   peerConnectionList.value[userId] = data
 }
 // 更新peer
-const updatePeer = (userId, streamId, peer, stream) => {
+const updatePeer = (userId, streamId, peer, stream, disabled) => {
   let m = {}
   if (streamId) {
     m['streamId'] = streamId
@@ -444,6 +519,9 @@ const updatePeer = (userId, streamId, peer, stream) => {
   }
   if (stream) {
     m['stream'] = stream
+  }
+  if (disabled) {
+    m['disabled'] = disabled
   }
   peerConnectionList.value[userId] = {
     ...peerConnectionList.value[userId],
@@ -478,7 +556,6 @@ const createOfferToSend = async (userId, toId) => {
     type: 'offer',
     sdp: offer.sdp
   })
-  console.log("success setLocalDescription")
   let params = {
     type: "offer",
     message: offer.sdp,
@@ -486,30 +563,34 @@ const createOfferToSend = async (userId, toId) => {
     sender: userId,
     receiver: toId,
   }
-
   socketStore.sendAny(params);
 }
 
 
 const initMediaSource = async () => {
-  if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     // 支持屏幕共享
     try {
-      // 使用 getDisplayMedia 获取桌面流
-      screenStream.value = await navigator.mediaDevices.getDisplayMedia({
-        video: true, // 获取视频流，如果只需要音频可以设置为 false
-        audio: false  // 获取音频流，如果不需要可以设置为 false
+      screenStream.value = await navigator.mediaDevices.getUserMedia({
+        // video: true, // 获取视频流，如果只需要音频可以设置为 false
+        audio: true  // 获取音频流，如果不需要可以设置为 false
       });
-      console.log("current mediaDevicesId:", screenStream.value.id)
       return screenStream.value.id
     } catch (error) {
-      console.error('Error accessing display media:', error);
+      screenStream.value = new MediaStream();
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator(); // 创建一个振荡器
+      oscillator.frequency.value = 0; // 设置频率为 0，这样没有声音
+      const dst = audioContext.createMediaStreamDestination();
+      oscillator.connect(dst);
+      oscillator.start();
+      // 将静音音轨添加到空的 MediaStream 中
+      screenStream.value.addTrack(dst.stream.getAudioTracks()[0]);
+      return screenStream.value.id
     }
   } else {
-    console.error('浏览器不支持屏幕共享');
+    ElMessage.error("设备不支持")
   }
-
-
 }
 
 const copyUserId = () => {
@@ -571,6 +652,19 @@ const copyRoomId = (data) => {
   }
 }
 
+.video-mod {
+  position: relative;
+}
+
+.item-menu-container {
+  background-color: rgba(0, 0, 0, .7);
+  height: 30px;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  margin-top: 30px;
+}
+
 .roomItem {
   .item {
     height: 30px;
@@ -600,7 +694,6 @@ const copyRoomId = (data) => {
     background: transparent !important;
   }
 
-
   .el-collapse-item__content {
     padding-bottom: 10px !important;
   }
@@ -612,6 +705,7 @@ const copyRoomId = (data) => {
   .el-card {
     background-color: rgb(37, 39, 42);
     border-color: rgb(53, 53, 53);
+    height: auto;
   }
 
   .el-collapse {
