@@ -15,6 +15,13 @@
               <div class="item" style="color: white" v-for="item in classifyList"
                    @click="handleRoomCollapseChange(item)">
                 {{ item.label }}
+                <el-button link style="margin-left: 10px" @click.stop="copyRoomId(item.ID)">
+                  <template #icon>
+                    <el-icon color="white">
+                      <CopyDocument/>
+                    </el-icon>
+                  </template>
+                </el-button>
               </div>
             </el-collapse-item>
           </el-collapse>
@@ -149,7 +156,6 @@ const resetConnect = (userId) => {
   socketStore.sendAny(paramsMap);
 }
 
-
 let isInit = ref(false)
 const socketMessage = async (data) => {
   if (data['type'] === 'room_notify') {
@@ -160,22 +166,24 @@ const socketMessage = async (data) => {
           if (getPeer(item['userId'])) {
             updatePeer(item['userId'], item['streamId'])
           }
-          if (!getPeer(item['userId'])) {
+
+
+          if (userEvent.userInfo.ID === item['userId']) {
+            updatePeer(item['userId'], '', '', screenStream.value)
+          }
+
+          if (!getPeer(item['userId']) && item['userId'] !== userEvent.userInfo.ID) {
             let peer = createPeer()
             setPeer(item['userId'], {
               peer: peer,
               stream: null,
               streamId: item['streamId']
             })
-            if (!screenStream.value) {
-              await initMediaSource()
-            }
-            screenStream.value.getTracks().forEach((track) => {
+
+            screenStream.value?.getTracks().forEach((track) => {
               getPeer(item['userId']).addTrack(track, screenStream.value)
             })
-            if (userEvent.userInfo.ID === item['userId']) {
-              updatePeer(item['userId'], '', '', screenStream.value)
-            }
+
             peer.onicecandidate = (e) => {
               onicecandidate(e, item['userId'])
             }
@@ -237,7 +245,6 @@ const socketMessage = async (data) => {
           })
           return
         } else {
-          console.log('setOffer')
           peer = getPeer(data['sender'])
           await setRemoteOfferAndSendAnswer(data['sender'], {
             type: "offer",
@@ -338,6 +345,7 @@ const oniceconnectionstatechange = (peer, userId) => {
     resetConnect(userId)
   }
 }
+
 const onsignalingstatechange = (peerConnection) => {
   console.log('onsignalingstatechange')
   if (peerConnection.signalingState === "stable") {
@@ -368,16 +376,16 @@ const initializePeer = async (userId, receiverId, currentUserId) => {
   //重建sender 的peer
   let peer = createPeer()
   // 赋值给sender 的map中
-  getPeer(userId).close()
-  updatePeer(userId, "", peer, '')
+  getPeer(receiverId).close()
+  updatePeer(receiverId, "", peer, '')
   let offer = await peer.createOffer()
   await peer.setLocalDescription({
     type: 'offer',
     sdp: offer.sdp
   })
 
-  screenStream.value.getTracks().forEach((track) => {
-    getPeer(userId).addTrack(track, screenStream.value)
+  screenStream.value?.getTracks().forEach((track) => {
+    peer.addTrack(track, screenStream.value)
   })
 
   if (userEvent.userInfo.ID === userId) {
@@ -506,6 +514,11 @@ const initMediaSource = async () => {
 
 const copyUserId = () => {
   navigator.clipboard.writeText(userEvent.userInfo.ID)
+  ElMessage.success("复制成功")
+}
+
+const copyRoomId = (data) => {
+  navigator.clipboard.writeText(data)
   ElMessage.success("复制成功")
 }
 </script>

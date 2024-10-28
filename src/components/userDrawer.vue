@@ -5,14 +5,21 @@
         title="个人设置"
         direction="rtl"
     >
-      <span>
-        <el-button>添加房间</el-button>
-        <el-button @click="addFriend">添加好友</el-button>
-        <el-button @click="addClassify">添加好友目录</el-button>
-        <el-button @click="exit">退出系统</el-button>
-      </span>
-      <div>
-        <audio-media></audio-media>
+      <div class="setting-drawer">
+        <ul>
+          <li>
+            <el-button>添加房间</el-button>
+          </li>
+          <li>
+            <el-button @click="addFriend">添加好友</el-button>
+          </li>
+          <li>
+            <el-button @click="addClassify">添加目录</el-button>
+          </li>
+          <li>
+            <el-button @click="exit">退出系统</el-button>
+          </li>
+        </ul>
       </div>
     </el-drawer>
   </div>
@@ -76,7 +83,16 @@ defineExpose({
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.setting-drawer ul {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+
+  li {
+    list-style: none;
+  }
+}
 
 </style>
 
@@ -84,6 +100,7 @@ defineExpose({
 .userDrawer-container {
   .el-drawer {
     background: #25272a;
+
     .el-drawer__header {
       color: white;
     }
