@@ -51,6 +51,7 @@ const joinBtnHandler = async (room) => {
   let res = await collectRoom(params)
   if (res['code'] === 0) {
     ElMessage.success("加入成功")
+    await searchHandler()
   }
 }
 const searchHandler = async () => {
