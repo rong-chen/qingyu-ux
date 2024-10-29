@@ -8,7 +8,7 @@
       <div class="setting-drawer">
         <ul>
           <li>
-            <el-button>添加房间</el-button>
+            <el-button @click="addRoom">添加房间</el-button>
           </li>
           <li>
             <el-button @click="addFriend">添加好友</el-button>
@@ -22,6 +22,27 @@
         </ul>
       </div>
     </el-drawer>
+
+    <el-dialog @close="roomDialogClose" :close-on-click-modal="false" v-model="roomFormDialog" title="新增" width="450">
+      <template #default>
+        <div class="room-dialog-content">
+          <el-form :model="roomForm">
+            <el-form-item label="">
+              <el-input type="text" v-model="roomForm.label" placeholder="名称"></el-input>
+            </el-form-item>
+            <el-form-item label="">
+              <el-input type="password" v-model="roomForm.password" placeholder="密码"></el-input>
+            </el-form-item>
+          </el-form>
+        </div>
+      </template>
+      <template #footer>
+        <div class="room-dialog-footer">
+          <el-button type="info" @click="roomFormDialog = false">关闭</el-button>
+          <el-button type="primary" @click="onSubmit">确定</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <script setup>
@@ -31,9 +52,28 @@ import {AddApplyFriend, CreateFriendClass} from "@/api/friends.js";
 import {userStore} from "@/store/user.js";
 import {useRouter} from "vue-router";
 import AudioMedia from "@/components/MediaDevices/audioMedia.vue";
+import {createRoom} from "@/api/room.js";
 
+let roomForm = ref({
+  label: "",
+  password: "",
+})
 const user = userStore()
 let visible = ref(false)
+
+const onSubmit = async () => {
+  let res = await createRoom(roomForm.value)
+  if (res['code'] === 0) {
+    ElMessage.success("新增成功")
+    roomFormDialog.value = false
+  }
+}
+const roomDialogClose=()=>{
+  roomForm.value={}
+}
+
+let roomFormDialog = ref(false)
+
 const show = () => {
   visible.value = true;
 }
@@ -62,6 +102,9 @@ const addFriend = () => {
           ElMessage.success("添加成功，请耐心等待")
         }
       })
+}
+const addRoom = () => {
+  roomFormDialog.value = true
 }
 const addClassify = () => {
   ElMessageBox.prompt('新增好友目录', '提示', {

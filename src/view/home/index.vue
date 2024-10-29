@@ -1,38 +1,64 @@
 <template>
   <div class="home-container" v-loading="loading">
-    <el-input class="search" placeholder="房间号" @input="searchHandler" v-model="form.search"></el-input>
+    <el-input class="search" placeholder="房间号" @input="searchHandler" v-model="form.rId"></el-input>
     <div style="width: 100px;height: 100%" v-show='!voiceRoom.length'></div>
     <div class="card-container infinite-list" v-show='voiceRoom.length'>
       <div v-for="item in voiceRoom" class="cardItem">
-        <el-card shadow="hover" style="display: flex"> 房间号:{{ item }}
-          <div class="num">
-            <span>
-              {{ item }}
-            </span>/
-            <span>
-              {{ item }}
-            </span>
+        <el-popover :width="200" trigger="click" placement="bottom" @hide="roomPassword = ''">
+          <template #reference>
+            <el-card shadow="hover">
+              <div>
+                <div> {{ item['label'] }}</div>
+                <hr>
+                <div style="font-size: 13px">
+                  创建者:<span class="num">{{ item['createUser']['nickname'] }}</span>
+                </div>
+              </div>
+            </el-card>
+          </template>
+          <div style="display: flex">
+            <el-input style="width: 100px" v-model="roomPassword" placeholder="密码"></el-input>
+            <el-button style="margin-left: 10px" type="primary" @click="joinBtnHandler(item)">加入</el-button>
           </div>
-        </el-card>
+        </el-popover>
       </div>
     </div>
   </div>
 </template>
 <script setup>
 import {onMounted, ref} from "vue";
+import {collectRoom, getAllRoomList, getCreateRoomList} from "@/api/room.js";
+import {userStore} from "@/store/user.js";
+import {ElMessage} from "element-plus";
+
+let roomPassword = ref("")
 
 let form = ref({
-  search: "",
+  rId: "",
 })
 let loading = ref(false)
+let userInfo = userStore()
 let voiceRoom = ref([])
 onMounted(() => {
   voiceRoom.value = []
 })
-const searchHandler = () => {
+const joinBtnHandler = async (room) => {
+  let params = {
+    "uid": userInfo.userInfo.ID,
+    "rid": room['ID'],
+    "password": roomPassword.value
+  }
+  let res = await collectRoom(params)
+  if (res['code'] === 0) {
+    ElMessage.success("加入成功")
+  }
+}
+const searchHandler = async () => {
+  if (!form.value.rId) return
   loading.value = true
-  for (let i = 0; i < 1000; i++) {
-    voiceRoom.value.push(i)
+  let res = await getAllRoomList({rId: form.value.rId})
+  if (res['code'] === 0) {
+    voiceRoom.value = res.data.filter(item => item['cId'] !== userInfo.userInfo.ID && !item['isCollect'])
   }
   loading.value = false
 }
@@ -69,9 +95,9 @@ const searchHandler = () => {
 }
 
 .cardItem {
-  width: 20%;
   padding: 5px;
   box-sizing: border-box;
+  cursor: pointer;
 
   .num {
     font-size: 12px;

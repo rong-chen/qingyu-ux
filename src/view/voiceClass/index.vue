@@ -10,9 +10,11 @@
            </el-button>
         </span></div>
         <div class="classify infinite-list roomItem" style="overflow: auto;">
-          <el-collapse v-model="currentRoomId">
+          <el-collapse v-model="collapseId">
             <el-collapse-item title="我的房间" name="1">
-              <div class="item" style="color: white" v-for="item in classifyList"
+              <div class="item" :class="{
+                isActive:item.ID === currentChangeRoom,
+              }" style="color: white" v-for="item in classifyList"
                    @click="handleRoomCollapseChange(item)">
                 {{ item.label }}
                 <el-button link style="margin-left: 10px" @click.stop="copyRoomId(item.ID)">
@@ -25,7 +27,7 @@
               </div>
             </el-collapse-item>
           </el-collapse>
-          <el-collapse v-model="currentRoomId">
+          <el-collapse v-model="collapseId">
             <el-collapse-item title="我的收藏" name="2">
               <div class="item" style="color: white" v-for="item in collectList"
                    @click="handleRoomCollapseChange(item['roomInfo'])">
@@ -43,15 +45,17 @@
             v-for="item in Object.keys(peerConnectionList)"
             :key="item">
           <el-card style="padding: 0;position: relative">
-            <div style="color: white">用户：{{ item }}</div>
+            <div style="color: white">用户：<span :style="{
+              color: item === userEvent.userInfo.ID ?'green':'white'
+            }">{{ item }}</span></div>
             <div class="video-mod">
-              <audio :class="'audio-container-player-'+item" style="width: 100%;height: auto;"></audio>
+              <video :class="'audio-container-player-'+item" style="width: 100%;height: auto;"></video>
               <div class="item-menu-container">
                 <el-button link style="margin-left: 10px" :disabled="!peerConnectionList[item].stream">
                   <template #icon>
                     <!--  下面click的判断条件是，如果是用户本人（不是远端）则禁用track轨道，否则直接把audio标签的srcObj置为空-->
                     <el-icon color="white" size="20"
-                             @click="userEvent.userInfo.ID === item ? settingAudioTrack(item,!peerConnectionList[item].disabled) : audioDisabledHandler(item)">
+                             @click="userEvent.userInfo.ID === item ? settingAudioTrack(item,peerConnectionList[item].disabled) : audioDisabledHandler(item)">
                       <Microphone v-show="!peerConnectionList[item]['disabled']"/>
                       <Mute v-show="peerConnectionList[item]['disabled']"/>
                     </el-icon>
@@ -81,7 +85,7 @@ import {ElMessage} from "element-plus";
 import {getCollectRoomList, getCreateRoomList, joinRoom} from "@/api/room.js";
 import {useSocketStore} from "@/store/websocketHandler/websocket.js";
 
-let currentRoomId = ref("");
+let collapseId = ref("");
 let lastRoomId = ref("");
 let peerConnectionList = ref({});
 let collectList = ref([])
@@ -117,9 +121,9 @@ const audioDisabledHandler = (id) => {
   if (!peerConnectionList.value[id].disabled) {
     const videoElement = document.querySelector(`.audio-container-player-${id}`)
     if (videoElement) {
+      videoElement.srcObject = null;
       const width = videoElement.clientWidth;
       const height = videoElement.clientHeight;
-      videoElement.srcObject = null;
       videoElement.style.width = `${width}px`;
       videoElement.style.height = `${height}px`;
     } else {
@@ -143,8 +147,8 @@ const fullScreenVideoHandler = (className) => {
   }
 }
 
-const getMap = async (id) => {
-  return peerConnectionList[id]
+const getMap = (id) => {
+  return peerConnectionList.value[id]
 }
 
 const settingAudioTrack = (userId, b) => {
@@ -152,12 +156,14 @@ const settingAudioTrack = (userId, b) => {
   mapItem['stream']?.getTracks().forEach((track) => {
     track.enabled = b;
   })
-  peerConnectionList.value[userId].disabled = !peerConnectionList.value[userId].disabled
+  peerConnectionList.value[userId].disabled = !b
 }
-
+let currentChangeRoom = ref("")
 const handleRoomCollapseChange = async ({ID}) => {
   exitRoomFunc()
+  currentChangeRoom.value = ID
   let id = await initMediaSource();
+  console.log(id)
   if (!id) {
     return
   }
@@ -167,7 +173,6 @@ const handleRoomCollapseChange = async ({ID}) => {
     "mediaStreamId": id
   })
   if (res['code'] === 0) {
-    ElMessage.success("加入房间成功")
     lastRoomId.value = ID
   }
 }
@@ -200,9 +205,11 @@ onMounted(async () => {
   }
   ListenSocketMessage()
   window.addEventListener('beforeunload', exitRoomFunc);
+  window.addEventListener('pagehide', exitRoomFunc);
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('pagehide', exitRoomFunc);
   window.removeEventListener('beforeunload', exitRoomFunc);
 })
 
@@ -234,12 +241,11 @@ const socketMessage = async (data) => {
           if (getPeer(item['userId'])) {
             updatePeer(item['userId'], item['streamId'], false)
           }
-
-          if (userEvent.userInfo.ID === item['userId']) {
+          if (userEvent.userInfo.ID === item['userId'] && !getMap(item['userId'])) {
             screenStream.value?.getTracks().forEach(track => {
               track.enabled = true
             })
-            updatePeer(item['userId'], '', '', screenStream.value, true)
+            updatePeer(item['userId'], '', '', screenStream.value, false)
             await resetEle()
           }
 
@@ -251,11 +257,9 @@ const socketMessage = async (data) => {
               streamId: item['streamId'],
               disabled: false
             })
-
             screenStream.value?.getTracks().forEach((track) => {
               getPeer(item['userId']).addTrack(track, screenStream.value)
             })
-
             peer.onicecandidate = (e) => {
               onicecandidate(e, item['userId'])
             }
@@ -568,12 +572,13 @@ const createOfferToSend = async (userId, toId) => {
 
 
 const initMediaSource = async () => {
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  screenStream.value = null
+  if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
     // 支持屏幕共享
     try {
-      screenStream.value = await navigator.mediaDevices.getUserMedia({
-        // video: true, // 获取视频流，如果只需要音频可以设置为 false
-        audio: true  // 获取音频流，如果不需要可以设置为 false
+      screenStream.value = await navigator.mediaDevices.getDisplayMedia({
+        video: true, // 获取视频流，如果只需要音频可以设置为 false
+        audio: false  // 获取音频流，如果不需要可以设置为 false
       });
       return screenStream.value.id
     } catch (error) {
@@ -586,6 +591,7 @@ const initMediaSource = async () => {
       oscillator.start();
       // 将静音音轨添加到空的 MediaStream 中
       screenStream.value.addTrack(dst.stream.getAudioTracks()[0]);
+      ElMessage.error("暂无通话权限")
       return screenStream.value.id
     }
   } else {
@@ -678,6 +684,10 @@ const copyRoomId = (data) => {
   }
 
   .item:hover {
+    background: #525253;
+  }
+
+  .item.isActive {
     background: #525253;
   }
 }
